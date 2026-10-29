@@ -1,6 +1,6 @@
 # Desktop in a Desktop
 
-A Chromium browser extension (Chrome, Brave, Edge…) that replaces the “New Tab” page with a free-form desk: several **spaces** (like tabs), a **drawer bar** at the top holding your tools, and widgets you drag wherever you like. Positions and contents are saved automatically.
+A (shamelessly vibe-coded) Chromium browser extension (Chrome, Brave, Edge…) that replaces the “New Tab” page with a free-form desk: several **spaces** (like tabs), a **drawer bar** at the top holding your tools, and widgets you drag wherever you like. Positions and contents are saved automatically.
 
 Everything stays **on your computer**: no account, no cloud, no network access, no analytics.
 
