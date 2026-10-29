@@ -15,13 +15,13 @@ Everything stays **on your computer**: no account, no cloud, no network access, 
 - **Links & images** – quick links, search, image, palette, label, frame
 - **Fun** – dice, bubbles, sounds, 2048, memory, tic-tac-toe, wheel of fortune, rain, fireplace
 
-You can fidget with the widgets by throwing them around, a slight random tilt (optional), drawers by category (optional), an optional fixed search bar in the centre, and you can personalise it with six colour themes.
+There also a multitude of options for making it more aligned with your idea of a personal workspace.
 
 ## Privacy and permissions
 
 The extension only asks for: `storage` (to save your data), `alarms` and `notifications` (timers and reminders while the tab is closed), and `search` (the search bar uses your browser's default search engine). It never reads or changes any website. Data lives in IndexedDB, inside your browser profile.
 
-> Data is not synced between computers and there is **no export/import yet**: uninstalling the extension or clearing the browser's data deletes it.
+> Data is not synced between computers and there is no sync feature: uninstalling the extension or clearing the browser's data deletes it.
 
 ## Install (from source)
 
@@ -45,6 +45,18 @@ npm run test:e2e     # end-to-end tests in a real browser (Playwright)
 ```
 
 The e2e tests load the built extension in a real Chromium-based browser. The browser is picked from the ones installed (see `playwright.config.ts`); to choose one, set `E2E_BROWSER=/path/to/browser`.
+
+## Continuous integration and releases
+
+`.github/workflows/ci.yml` runs on every push to `main` and on pull requests: type check, unit tests, build, end-to-end tests, and it keeps the built zip as a workflow artifact.
+
+To publish a release, bump `version` in `package.json`, commit, then push a matching tag:
+
+```sh
+git tag v0.2.0 && git push --tags
+```
+
+`.github/workflows/release.yml` checks that the tag matches `package.json`, runs the checks and attaches the zip to a new GitHub release.
 
 ## Project layout
 
