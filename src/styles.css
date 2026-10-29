@@ -140,6 +140,11 @@ button { font: inherit; color: inherit; cursor: pointer; background: none; borde
 .tab-add:hover { background: var(--surface); color: var(--text); }
 
 .settings { position: relative; padding-right: 10px; }
+.settings-btn { padding: 4px 16px; border-radius: 999px; font-size: 26px; line-height: 1; color: var(--muted); }
+.settings-btn:hover, .settings-btn[aria-expanded="true"] { background: var(--surface); color: var(--text); }
+.credits { display: grid; gap: 2px; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--bar); color: var(--muted); font-size: 12px; }
+.credits strong { color: var(--text); }
+.credits a { color: var(--accent); }
 .settings-panel { position: absolute; right: 8px; bottom: calc(100% + 8px); display: grid; gap: 8px; width: 260px; padding: 12px 14px; background: var(--surface); border-radius: 14px; box-shadow: 0 8px 24px rgb(var(--shadow) / .3); font-size: 14px; }
 .settings-panel label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
 .settings-panel select { margin-left: auto; font: inherit; color: inherit; background: var(--bar); border: 0; border-radius: 8px; padding: 2px 6px; }

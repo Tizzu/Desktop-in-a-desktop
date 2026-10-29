@@ -122,3 +122,12 @@ test('lingua: una lingua sconosciuta nei dati salvati torna all’inglese', asyn
   await seed(page, appData([], { language: 'xx' }));
   await expect(page.locator('.drawer-item[data-type="todo"]')).toHaveAttribute('aria-label', 'To do');
 });
+
+test('impostazioni: il pannello mostra i crediti e il pulsante è ben grande', async ({ page }) => {
+  await openApp(page);
+  const button = page.getByRole('button', { name: 'Settings' });
+  expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(34);
+  await button.click();
+  await expect(page.locator('.credits')).toContainText('Valentino Artizzu');
+  await expect(page.locator('.credits a')).toHaveAttribute('href', /github\.com\/Tizzu\/Desktop-in-a-desktop/);
+});
