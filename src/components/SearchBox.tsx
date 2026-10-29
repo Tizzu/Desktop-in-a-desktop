@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { runSearch } from '../core/search';
+import { useT } from '../core/i18n';
 
 interface Props {
   /** Barra fissa: i tasti "\" e "/" portano il focus qui. */
@@ -12,6 +13,7 @@ interface Props {
 
 /** Campo di ricerca condiviso dal widget e dalla barra fissa. */
 export function SearchBox({ hotkey = false, covered = false, onActiveChange }: Props) {
+  const t = useT();
   const [text, setText] = useState('');
   const input = useRef<HTMLInputElement>(null);
 
@@ -41,8 +43,8 @@ export function SearchBox({ hotkey = false, covered = false, onActiveChange }: P
         ref={input}
         type="search"
         value={text}
-        placeholder={covered ? 'Sposta i widget o premi \\ per cercare' : hotkey ? 'Cerca sul web…  ( \\ )' : 'Cerca sul web…'}
-        aria-label="Cerca"
+        placeholder={covered ? t('Move the widgets or press \\ to search') : hotkey ? t('Search the web…  ( \\ )') : t('Search the web…')}
+        aria-label={t('Search')}
         onChange={(e) => setText(e.target.value)}
         onFocus={() => onActiveChange?.(true)}
         onBlur={() => onActiveChange?.(false)}

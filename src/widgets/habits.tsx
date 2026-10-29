@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { addDays, dayKey } from './dates';
 import { useToday } from './useToday';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT, useLocale } from '../core/i18n';
 
 interface Habit { id: string; name: string; days: string[] }
 interface HabitsState { habits: Habit[] }
 
 function Habits({ state, onChange }: WidgetProps<HabitsState>) {
+  const t = useT();
+  const locale = useLocale();
   const [draft, setDraft] = useState('');
   useToday(); // ridisegna allo scoccare della mezzanotte
   const today = new Date();
@@ -31,7 +34,7 @@ function Habits({ state, onChange }: WidgetProps<HabitsState>) {
         <span />
         {week.map((d) => (
           <span key={dayKey(d)} className={dayKey(d) === dayKey(today) ? 'today' : ''}>
-            {d.toLocaleDateString('it-IT', { weekday: 'narrow' }).toUpperCase()}
+            {d.toLocaleDateString(locale, { weekday: 'narrow' }).toUpperCase()}
           </span>
         ))}
         <span />
@@ -45,20 +48,20 @@ function Habits({ state, onChange }: WidgetProps<HabitsState>) {
               <button key={key} className={`habit-cell${h.days.includes(key) ? ' on' : ''}`} aria-label={`${h.name} ${key}`} aria-pressed={h.days.includes(key)} onClick={() => toggle(h, key)} />
             );
           })}
-          <button className="icon-btn" aria-label={`Elimina ${h.name}`} onClick={() => onChange({ habits: state.habits.filter((x) => x.id !== h.id) })}>×</button>
+          <button className="icon-btn" aria-label={t('Delete {text}', { text: h.name })} onClick={() => onChange({ habits: state.habits.filter((x) => x.id !== h.id) })}>×</button>
         </div>
       ))}
-      <input className="todo-input" value={draft} placeholder="Nuova abitudine…" onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+      <input className="todo-input" value={draft} placeholder={t('New habit…')} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
     </div>
   );
 }
 
 registerWidget({
   type: 'habits',
-  label: 'Abitudini',
+  label: 'Habits',
   icon: '🌱',
   category: 'wellbeing',
   defaultSize: { w: 330, h: 250 },
-  initialState: () => ({ habits: [{ id: 'demo', name: 'Bere acqua', days: [] }] }),
+  initialState: () => ({ habits: [{ id: 'demo', name: 'Drink water', days: [] }] }),
   Component: Habits,
 });

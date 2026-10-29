@@ -1,3 +1,5 @@
+import type { Lang } from './i18n';
+
 export const SCHEMA_VERSION = 2;
 
 export interface WidgetInstance {
@@ -38,11 +40,13 @@ export interface Settings {
   searchBar: boolean;
   /** Palette dell'interfaccia; 'system' segue l'accento del sistema (CSS `AccentColor`). */
   theme: ThemeId;
+  /** Lingua dell'interfaccia. */
+  language: Lang;
   /** Cassetto aperto ('all' mostra ogni tool). */
   activeCategory: CategoryId | 'all';
 }
 
-export const DEFAULT_SETTINGS: Settings = { tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, theme: 'warm', activeCategory: 'all' };
+export const DEFAULT_SETTINGS: Settings = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, theme: 'warm', activeCategory: 'all' };
 
 export interface AppData {
   version: number;

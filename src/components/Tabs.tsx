@@ -1,8 +1,10 @@
 import { useState, type Dispatch } from 'react';
 import type { Action } from '../core/store';
 import type { AppData } from '../core/types';
+import { useT } from '../core/i18n';
 
 export function Tabs({ data, dispatch }: { data: AppData; dispatch: Dispatch<Action> }) {
+  const t = useT();
   const [editing, setEditing] = useState<string | null>(null);
   const sorted = [...data.workspaces].sort((a, b) => a.order - b.order);
 
@@ -24,7 +26,7 @@ export function Tabs({ data, dispatch }: { data: AppData; dispatch: Dispatch<Act
             <button
               onClick={() => dispatch({ type: 'setActive', id: w.id })}
               onDoubleClick={() => setEditing(w.id)}
-              title="Doppio click per rinominare"
+              title={t('Double-click to rename')}
             >
               {w.name}
             </button>
@@ -32,13 +34,13 @@ export function Tabs({ data, dispatch }: { data: AppData; dispatch: Dispatch<Act
           {sorted.length > 1 && (
             <button
               className="icon-btn"
-              aria-label={`Chiudi ${w.name}`}
-              onClick={() => confirm(`Eliminare "${w.name}" e i suoi widget?`) && dispatch({ type: 'removeWorkspace', id: w.id })}
+              aria-label={t('Close {name}', { name: w.name })}
+              onClick={() => confirm(t('Delete "{name}" and its widgets?', { name: w.name })) && dispatch({ type: 'removeWorkspace', id: w.id })}
             >×</button>
           )}
         </div>
       ))}
-      <button className="tab-add" aria-label="Nuovo spazio" onClick={() => dispatch({ type: 'addWorkspace' })}>＋</button>
+      <button className="tab-add" aria-label={t('New space')} onClick={() => dispatch({ type: 'addWorkspace', name: t('Space {n}', { n: Math.max(-1, ...data.workspaces.map((w) => w.order)) + 2 }) })}>＋</button>
     </nav>
   );
 }

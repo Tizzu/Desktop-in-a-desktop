@@ -12,7 +12,7 @@ describe('calcolatrice', () => {
     expect(run(['0', '.', '1', '+', '0', '.', '2', '='])).toBe('0.3');
   });
   it('segnala la divisione per zero e riparte dopo un tasto', () => {
-    expect(run(['5', '÷', '0', '='])).toBe('Errore');
+    expect(run(['5', '÷', '0', '='])).toBe('Error');
     expect(run(['5', '÷', '0', '=', '7'])).toBe('7');
   });
   it('supporta cambio segno, percentuale e cancellazione', () => {

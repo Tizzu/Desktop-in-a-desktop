@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { browser } from 'wxt/browser';
 import { Canvas } from './components/Canvas';
 import { Drawer } from './components/Drawer';
 import { SettingsMenu } from './components/SettingsMenu';
 import { Tabs } from './components/Tabs';
+import { LangContext } from './core/i18n';
 import { createAutosaver, createDefaultData, createIdbStorage, readBackup } from './core/storage';
 import { reducer, type Action } from './core/store';
 import { createSync, mergeRemoteState, prepare, toShared, type Sync } from './core/sync';
@@ -74,6 +76,16 @@ export function App() {
     try { localStorage.setItem('theme', theme); } catch { /* storage non disponibile */ }
   }, [theme, ready]);
 
+  // La lingua vale anche fuori dalla pagina: l'attributo lang, la copia in localStorage (messaggio d'errore al primo
+  // disegno) e quella in storage.local, che il service worker legge per le notifiche.
+  const language = data.settings.language;
+  useEffect(() => {
+    if (!ready) return;
+    document.documentElement.lang = language;
+    try { localStorage.setItem('language', language); } catch { /* storage non disponibile */ }
+    try { void browser.storage.local.set({ language }); } catch { /* fuori dall'estensione */ }
+  }, [language, ready]);
+
   useEffect(() => {
     const flush = () => {
       saver.backup();
@@ -92,6 +104,7 @@ export function App() {
   const active = data.workspaces.find((w) => w.id === data.activeWorkspaceId) ?? data.workspaces[0]!;
 
   return (
+    <LangContext.Provider value={language}>
     <div className="shell">
       <Drawer
         canvasRef={canvasRef}
@@ -113,5 +126,6 @@ export function App() {
         <SettingsMenu settings={data.settings} dispatch={dispatch} />
       </div>
     </div>
+    </LangContext.Provider>
   );
 }

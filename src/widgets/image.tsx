@@ -1,5 +1,6 @@
 import { useRef, type DragEvent } from 'react';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface ImageState { src: string | null }
 
@@ -16,6 +17,7 @@ async function toDataUrl(file: File, max = 900): Promise<string> {
 }
 
 function ImageWidget({ state, onChange }: WidgetProps<ImageState>) {
+  const t = useT();
   const input = useRef<HTMLInputElement>(null);
 
   const load = async (file?: File) => {
@@ -26,10 +28,10 @@ function ImageWidget({ state, onChange }: WidgetProps<ImageState>) {
 
   return (
     <div className="img" onDragOver={(e) => e.preventDefault()} onDrop={drop}>
-      {state.src ? <img src={state.src} alt="" draggable={false} /> : <p>Trascina qui un’immagine<br />oppure sceglila dal computer</p>}
+      {state.src ? <img src={state.src} alt="" draggable={false} /> : <p>{t('Drop an image here')}<br />{t('or choose one from your computer')}</p>}
       <div className="img-actions">
-        <button className="chip" onClick={() => input.current?.click()}>{state.src ? 'Cambia' : 'Scegli…'}</button>
-        {state.src && <button className="chip" onClick={() => onChange({ src: null })}>Togli</button>}
+        <button className="chip" onClick={() => input.current?.click()}>{state.src ? t('Change') : t('Choose…')}</button>
+        {state.src && <button className="chip" onClick={() => onChange({ src: null })}>{t('Remove')}</button>}
       </div>
       <input ref={input} type="file" accept="image/*" hidden onChange={(e) => { void load(e.target.files?.[0]); e.target.value = ''; }} />
     </div>
@@ -38,7 +40,7 @@ function ImageWidget({ state, onChange }: WidgetProps<ImageState>) {
 
 registerWidget({
   type: 'image',
-  label: 'Immagine',
+  label: 'Image',
   icon: '🖼️',
   category: 'media',
   defaultSize: { w: 280, h: 240 },

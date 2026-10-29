@@ -3,6 +3,7 @@ import type { Action } from '../core/store';
 import type { Settings, Workspace, WidgetInstance } from '../core/types';
 import { bounceOff, intersects, maxCoord, tiltExtent, type Rect } from '../core/physics';
 import { getWidget } from '../widgets';
+import { useT } from '../core/i18n';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SearchBox } from './SearchBox';
 
@@ -132,6 +133,7 @@ interface Props {
 const COVER_TOLERANCE = 6;
 
 export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ workspace, settings, dispatch }, ref) {
+  const t = useT();
   const barRef = useRef<HTMLDivElement>(null);
   const [covered, setCovered] = useState(false);
   const [active, setActive] = useState(false);
@@ -183,10 +185,10 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
             onPointerDown={() => dispatch({ type: 'bringToFront', id: w.id })}
           >
             <header className="widget-bar" onPointerDown={(e) => startGesture(e, w, dispatch, 'move', settings)}>
-              <span>{def.icon} {def.label}</span>
+              <span>{def.icon} {t(def.label)}</span>
               <button
                 className="icon-btn"
-                aria-label="Rimuovi widget"
+                aria-label={t('Remove widget')}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => dispatch({ type: 'removeWidget', id: w.id })}
               >×</button>
@@ -195,7 +197,7 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
               <ErrorBoundary
                 fallback={
                   <div className="widget-error" role="alert">
-                    Questo widget ha avuto un problema. Puoi toglierlo con la ×: gli altri non sono toccati.
+                    {t('This widget ran into a problem. You can remove it with the ×; the others are untouched.')}
                   </div>
                 }
               >

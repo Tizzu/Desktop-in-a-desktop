@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { dragToolTo, dragWidget, openApp, position, readSaved, seed, settled, widgets } from './helpers';
+import { appData, dragToolTo, dragWidget, openApp, position, readSaved, seed, settled, widgets } from './helpers';
 
-const openSettings = (page: Page) => page.getByRole('button', { name: 'Impostazioni' }).click();
+const openSettings = (page: Page) => page.getByRole('button', { name: 'Settings' }).click();
 const transformOf = (page: Page) => widgets(page).first().evaluate((el) => (el as HTMLElement).style.transform);
 
 test.beforeEach(async ({ page }) => {
@@ -9,23 +9,23 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('inclinazione casuale: si può spegnere e riaccendere ritrovando lo stesso angolo', async ({ page }) => {
-  await dragToolTo(page, 'Post-it', 400, 250);
+  await dragToolTo(page, 'Sticky note', 400, 250);
   const angle = await transformOf(page);
   expect(angle).toMatch(/rotate\(/);
 
   await openSettings(page);
-  await page.getByLabel('Inclinazione casuale dei widget').uncheck();
+  await page.getByLabel('Random tilt on widgets').uncheck();
   await expect.poll(() => transformOf(page)).toBe('');
-  await page.getByLabel('Inclinazione casuale dei widget').check();
+  await page.getByLabel('Random tilt on widgets').check();
   await expect.poll(() => transformOf(page)).toBe(angle);
 });
 
 test('lancio con inerzia spento: il widget si ferma dove lo lasci', async ({ page }) => {
   await openSettings(page);
-  await page.getByLabel('Lancio con inerzia').uncheck();
+  await page.getByLabel('Throw with momentum').uncheck();
   await openSettings(page);
 
-  await dragToolTo(page, 'Post-it', 300, 300);
+  await dragToolTo(page, 'Sticky note', 300, 300);
   const w = widgets(page).first();
   await dragWidget(page, w, 360, 0, 6); // lo stesso gesto rapido che con il lancio acceso lo fa proseguire
   const release = await position(w);
@@ -38,14 +38,14 @@ test('cassetti per categoria: filtrano i tool e si possono spegnere', async ({ p
   const all = await tools().count();
   expect(all).toBeGreaterThan(20);
 
-  await page.getByRole('tab', { name: 'Tempo' }).click();
+  await page.getByRole('tab', { name: 'Time' }).click();
   const timeTools = await tools().count();
   expect(timeTools).toBeLessThan(all);
   await expect(page.locator('.drawer-item[aria-label="Timer"]')).toHaveCount(1);
   await expect(page.locator('.drawer-item[aria-label="Post-it"]')).toHaveCount(0);
 
   await openSettings(page);
-  await page.getByLabel('Cassetti per categoria').uncheck();
+  await page.getByLabel('Drawers by category').uncheck();
   await expect(page.locator('.drawer-cats')).toHaveCount(0);
   await expect(tools()).toHaveCount(all); // spenti: tornano tutti i tool
 });
@@ -53,7 +53,7 @@ test('cassetti per categoria: filtrano i tool e si possono spegnere', async ({ p
 test('stile dei cassetti: la scelta resta dopo la ricarica', async ({ page }) => {
   await expect(page.locator('.drawer--tucked')).toHaveCount(1);
   await openSettings(page);
-  await page.getByLabel('Stile dei cassetti').selectOption({ label: 'Di sbieco' });
+  await page.getByLabel('Drawer style').selectOption({ label: 'Slanted' });
   await expect(page.locator('.drawer--slanted')).toHaveCount(1);
   await page.waitForTimeout(500);
   await page.reload();
@@ -62,7 +62,7 @@ test('stile dei cassetti: la scelta resta dopo la ricarica', async ({ page }) =>
 
 test('tema: si applica, si ritrova alla riapertura e c\'è già al primo disegno (niente sfarfallio)', async ({ page }) => {
   await openSettings(page);
-  await page.getByRole('radio', { name: 'Bosco' }).click();
+  await page.getByRole('radio', { name: 'Forest' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'forest');
   await page.waitForTimeout(500);
 
@@ -97,4 +97,28 @@ test('un salvataggio del vecchio formato (v1) si apre e viene aggiornato', async
   expect(saved.version).toBe(2);
   expect(saved.settings).toMatchObject({ tilt: true, physics: true, theme: 'warm', categories: true });
   expect(saved.workspaces[0].widgets[0]).toMatchObject({ rot: 0, state: { text: 'dal passato' } });
+});
+
+test('lingua: inglese di default, si cambia in italiano dalle impostazioni e si ritrova alla riapertura', async ({ page }) => {
+  await openApp(page);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('.drawer-item[data-type="todo"]')).toHaveAttribute('aria-label', 'To do');
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByLabel('Language').selectOption('it');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'it');
+  await expect(page.locator('.drawer-item[data-type="todo"]')).toHaveAttribute('aria-label', 'Da fare');
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toBeVisible();
+
+  await page.waitForTimeout(600); // autosave con debounce
+  await page.reload();
+  await page.locator('.drawer-item').first().waitFor();
+  await expect(page.locator('.drawer-item[data-type="todo"]')).toHaveAttribute('aria-label', 'Da fare');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'it');
+});
+
+test('lingua: una lingua sconosciuta nei dati salvati torna all’inglese', async ({ page }) => {
+  await openApp(page);
+  await seed(page, appData([], { language: 'xx' }));
+  await expect(page.locator('.drawer-item[data-type="todo"]')).toHaveAttribute('aria-label', 'To do');
 });

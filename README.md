@@ -1,61 +1,67 @@
 # Desktop in a Desktop
 
-Un'estensione per browser Chromium (Chrome, Brave, Edge…) che sostituisce la pagina «Nuova scheda» con una scrivania libera: più **spazi** (come schede), una **barra di cassetti** in alto con i tool, e widget che trascini dove vuoi. Posizione e contenuto si salvano da soli.
+A Chromium browser extension (Chrome, Brave, Edge…) that replaces the “New Tab” page with a free-form desk: several **spaces** (like tabs), a **drawer bar** at the top holding your tools, and widgets you drag wherever you like. Positions and contents are saved automatically.
 
-Tutto resta **sul tuo computer**: nessun account, nessun cloud, nessuna rete, nessuna statistica.
+Everything stays **on your computer**: no account, no cloud, no network access, no analytics.
 
-## Cosa c'è dentro
+## What's inside
 
-49 widget, in sei categorie:
+49 widgets in six categories:
 
-- **Appunti** – post-it (con disegno), taccuino (markdown), da fare, lavagna, obiettivo del giorno, diario, schede di ripasso, bacheca
-- **Tempo** – orologio, timer, Pomodoro, cronometro, calendario, fusi orari, conto alla rovescia, promemoria con notifica, intervalli, agenda
-- **Numeri** – calcolatrice, convertitore, contatore, spese, salvadanaio, dividi il conto, progresso, acqua
-- **Benessere** – abitudini, respiro, pausa occhi, umore, gratitudine, sonno, serie di giorni, pianta
-- **Link e immagini** – link rapidi, ricerca, immagine, tavolozza, etichetta, cornice
-- **Svago** – dadi, bolle, suoni, 2048, memory, tris, ruota della fortuna, pioggia, caminetto
+- **Notes** – sticky note (with drawing), notebook (markdown), to-do, blackboard, goal of the day, journal, flashcards, board
+- **Time** – clock, timer, Pomodoro, stopwatch, calendar, world clock, countdown, reminders with notifications, intervals, agenda
+- **Numbers** – calculator, converter, counter, expenses, piggy bank, split the bill, progress, water
+- **Wellbeing** – habits, breathing, eye break, mood, gratitude, sleep, day streak, plant
+- **Links & images** – quick links, search, image, palette, label, frame
+- **Fun** – dice, bubbles, sounds, 2048, memory, tic-tac-toe, wheel of fortune, rain, fireplace
 
-Altro: lancio dei widget con inerzia e rimbalzi, leggera rotazione casuale (disattivabile), cassetti per categoria (opzionali), barra di ricerca fissa al centro, sei temi di colore, sincronizzazione tra schede aperte.
+You can fidget with the widgets by throwing them around, a slight random tilt (optional), drawers by category (optional), an optional fixed search bar in the centre, and you can personalise it with six colour themes.
 
-## Privacy e permessi
+## Privacy and permissions
 
-L'estensione chiede solo: `storage` (salvare i dati), `alarms` e `notifications` (timer e promemoria a scheda chiusa), `search` (la barra di ricerca usa il motore predefinito del browser). Non legge né modifica nessun sito. I dati stanno in IndexedDB, nel profilo del browser.
+The extension only asks for: `storage` (to save your data), `alarms` and `notifications` (timers and reminders while the tab is closed), and `search` (the search bar uses your browser's default search engine). It never reads or changes any website. Data lives in IndexedDB, inside your browser profile.
 
-> I dati non vengono sincronizzati fra computer e **non c'è ancora export/import**: disinstallando l'estensione o cancellando i dati del browser si perdono.
+> Data is not synced between computers and there is **no export/import yet**: uninstalling the extension or clearing the browser's data deletes it.
 
-## Installare (da sorgente)
+## Install (from source)
 
-Serve Node.js 20+.
+Requires Node.js 20+.
 
 ```sh
 npm install
-npm run build        # crea .output/chrome-mv3
+npm run build        # produces .output/chrome-mv3
 ```
 
-Poi in `chrome://extensions` (o `brave://extensions`): attiva «Modalità sviluppatore» → «Carica estensione non pacchettizzata» → scegli `.output/chrome-mv3`.
+Then open `chrome://extensions` (or `brave://extensions`), turn on “Developer mode”, choose “Load unpacked” and select `.output/chrome-mv3`.
 
-Per sviluppare con ricarica automatica: `npm run dev`. Per ottenere uno zip da distribuire: `npm run zip`.
+For development with auto-reload run `npm run dev`. To build a zip you can distribute run `npm run zip`.
 
-## Test
+## Tests
 
 ```sh
-npm run compile      # controllo dei tipi
-npm test             # test unitari (Vitest)
-npm run test:e2e     # test nel browser (Playwright)
+npm run compile      # type check
+npm test             # unit tests (Vitest)
+npm run test:e2e     # end-to-end tests in a real browser (Playwright)
 ```
 
-I test e2e caricano la versione compilata in un browser Chromium reale. Il browser è cercato tra quelli installati (vedi `playwright.config.ts`); per sceglierne uno, imposta `E2E_BROWSER=/percorso/del/browser`.
+The e2e tests load the built extension in a real Chromium-based browser. The browser is picked from the ones installed (see `playwright.config.ts`); to choose one, set `E2E_BROWSER=/path/to/browser`.
 
-## Struttura
+## Project layout
 
-- `entrypoints/` – pagina della nuova scheda e service worker (notifiche)
-- `src/core/` – modello dati, salvataggio, sincronizzazione tra schede, fisica, temi
-- `src/components/` – tela, cassetti, schede, impostazioni
-- `src/widgets/` – un file per widget (si registra con `registerWidget`) più la logica pura con i suoi test
-- `e2e/` – test nel browser
+- `entrypoints/` – the new-tab page and the service worker (notifications)
+- `src/core/` – data model, storage, tab sync, physics, themes, translations
+- `src/components/` – canvas, drawers, tabs, settings
+- `src/widgets/` – one file per widget (registered with `registerWidget`), plus pure logic with its tests
+- `e2e/` – browser tests
 
-Aggiungere un widget: crea `src/widgets/nome.tsx`, chiama `registerWidget({...})` e importalo in `src/widgets/index.ts`.
+### Adding a widget
 
-## Licenza
+Create `src/widgets/name.tsx`, call `registerWidget({...})` and import it in `src/widgets/index.ts`. Write user-facing text in English through `t('…')` (from `useT()`), and add the Italian translation to `src/core/i18n.it.ts`; a unit test fails if a text has no translation.
 
-MIT – vedi [LICENSE](LICENSE).
+### Adding a language
+
+Add it to `LANGUAGES` in `src/core/i18n.ts`, create a table like `src/core/i18n.it.ts`, and register it in `tables`. Missing entries fall back to English.
+
+## License
+
+MIT – see [LICENSE](LICENSE).

@@ -1,5 +1,6 @@
 import { parseBlocks, parseInline, toggleTask } from './markdown';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface NotebookState { text: string; preview: boolean }
 
@@ -17,15 +18,16 @@ function Inline({ text }: { text: string }) {
 }
 
 function Notebook({ state, onChange }: WidgetProps<NotebookState>) {
+  const t = useT();
   return (
     <div className="notebook">
       <div className="notebook-bar">
-        <button className={`chip${!state.preview ? ' on' : ''}`} onClick={() => onChange({ ...state, preview: false })}>Scrivi</button>
-        <button className={`chip${state.preview ? ' on' : ''}`} onClick={() => onChange({ ...state, preview: true })}>Leggi</button>
+        <button className={`chip${!state.preview ? ' on' : ''}`} onClick={() => onChange({ ...state, preview: false })}>{t('Write')}</button>
+        <button className={`chip${state.preview ? ' on' : ''}`} onClick={() => onChange({ ...state, preview: true })}>{t('Read')}</button>
       </div>
       {state.preview ? (
         <div className="md">
-          {state.text.trim() === '' && <p className="md-empty">Ancora niente qui. Passa a “Scrivi”.</p>}
+          {state.text.trim() === '' && <p className="md-empty">{t('Nothing here yet. Switch to “Write”.')}</p>}
           {parseBlocks(state.text).map((b) => {
             if (b.kind === 'blank') return <div key={b.line} className="md-gap" />;
             if (b.kind === 'heading') {
@@ -49,7 +51,7 @@ function Notebook({ state, onChange }: WidgetProps<NotebookState>) {
         <textarea
           className="notebook-text"
           value={state.text}
-          placeholder={'# Titolo\n- [ ] cosa fare\n**grassetto**, *corsivo*'}
+          placeholder={t('# Title\n- [ ] to do\n**bold**, *italic*')}
           onChange={(e) => onChange({ ...state, text: e.target.value })}
         />
       )}
@@ -59,7 +61,7 @@ function Notebook({ state, onChange }: WidgetProps<NotebookState>) {
 
 registerWidget({
   type: 'notebook',
-  label: 'Taccuino',
+  label: 'Notebook',
   icon: '📓',
   category: 'notes',
   defaultSize: { w: 340, h: 400 },

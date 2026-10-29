@@ -1,34 +1,36 @@
 import { useState, type Dispatch } from 'react';
+import { LANGUAGES, isLang, useT } from '../core/i18n';
 import type { Action } from '../core/store';
 import { THEMES } from '../core/themes';
 import type { Settings } from '../core/types';
 
 const OPTIONS: { key: 'tilt' | 'physics' | 'categories' | 'searchBar'; label: string }[] = [
-  { key: 'categories', label: 'Cassetti per categoria' },
-  { key: 'searchBar', label: 'Barra di ricerca al centro' },
-  { key: 'tilt', label: 'Inclinazione casuale dei widget' },
-  { key: 'physics', label: 'Lancio con inerzia' },
+  { key: 'categories', label: 'Drawers by category' },
+  { key: 'searchBar', label: 'Search bar in the centre' },
+  { key: 'tilt', label: 'Random tilt on widgets' },
+  { key: 'physics', label: 'Throw with momentum' },
 ];
 
 export function SettingsMenu({ settings, dispatch }: { settings: Settings; dispatch: Dispatch<Action> }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <div className="settings">
-      <button className="tab-add" aria-label="Impostazioni" aria-expanded={open} onClick={() => setOpen(!open)}>⚙</button>
+      <button className="tab-add" aria-label={t('Settings')} aria-expanded={open} onClick={() => setOpen(!open)}>⚙</button>
       {open && (
         <div className="settings-panel">
-          <div className="theme-row" role="radiogroup" aria-label="Colori">
-            <span>Colori</span>
-            {THEMES.map((t) => (
+          <div className="theme-row" role="radiogroup" aria-label={t('Colours')}>
+            <span>{t('Colours')}</span>
+            {THEMES.map((th) => (
               <button
-                key={t.id}
+                key={th.id}
                 role="radio"
-                aria-checked={settings.theme === t.id}
-                aria-label={t.label}
-                title={t.label}
-                className={`theme-dot${settings.theme === t.id ? ' on' : ''}`}
-                style={{ background: t.swatch }}
-                onClick={() => dispatch({ type: 'setSettings', patch: { theme: t.id } })}
+                aria-checked={settings.theme === th.id}
+                aria-label={t(th.label)}
+                title={t(th.label)}
+                className={`theme-dot${settings.theme === th.id ? ' on' : ''}`}
+                style={{ background: th.swatch }}
+                onClick={() => dispatch({ type: 'setSettings', patch: { theme: th.id } })}
               />
             ))}
           </div>
@@ -39,17 +41,26 @@ export function SettingsMenu({ settings, dispatch }: { settings: Settings; dispa
                 checked={settings[key]}
                 onChange={(e) => dispatch({ type: 'setSettings', patch: { [key]: e.target.checked } })}
               />
-              {label}
+              {t(label)}
             </label>
           ))}
           <label>
-            Stile dei cassetti
+            {t('Drawer style')}
             <select
               value={settings.drawerStyle}
               onChange={(e) => dispatch({ type: 'setSettings', patch: { drawerStyle: e.target.value as Settings['drawerStyle'] } })}
             >
-              <option value="tucked">In piedi, infilati</option>
-              <option value="slanted">Di sbieco</option>
+              <option value="tucked">{t('Standing, tucked in')}</option>
+              <option value="slanted">{t('Slanted')}</option>
+            </select>
+          </label>
+          <label>
+            {t('Language')}
+            <select
+              value={settings.language}
+              onChange={(e) => isLang(e.target.value) && dispatch({ type: 'setSettings', patch: { language: e.target.value } })}
+            >
+              {LANGUAGES.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
             </select>
           </label>
         </div>

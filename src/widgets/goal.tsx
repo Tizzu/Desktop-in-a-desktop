@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useToday } from './useToday';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface GoalState { goal: string; done: boolean; date: string }
 
 function Goal({ state, onChange }: WidgetProps<GoalState>) {
+  const t = useT();
   const today = useToday();
   const current = state.date === today && state.goal !== '';
   const [editing, setEditing] = useState(false);
@@ -19,35 +21,35 @@ function Goal({ state, onChange }: WidgetProps<GoalState>) {
   if (current && !editing) {
     return (
       <div className="goal">
-        <div className="goal-label">Obiettivo di oggi</div>
+        <div className="goal-label">{t('Goal for today')}</div>
         <label className={`goal-text${state.done ? ' done' : ''}`}>
           <input type="checkbox" checked={state.done} onChange={(e) => onChange({ ...state, done: e.target.checked })} />
           <span>{state.goal}</span>
         </label>
-        <button className="chip" onClick={() => { setDraft(state.goal); setEditing(true); }}>Cambia</button>
+        <button className="chip" onClick={() => { setDraft(state.goal); setEditing(true); }}>{t('Change')}</button>
       </div>
     );
   }
   return (
     <div className="goal">
-      <div className="goal-label">Qual è la cosa più importante di oggi?</div>
+      <div className="goal-label">{t('What is the most important thing today?')}</div>
       <input
         className="todo-input"
         autoFocus={editing}
         value={draft}
-        placeholder="Scrivi e premi Invio…"
+        placeholder={t('Type and press Enter…')}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && save()}
         onBlur={() => editing && save()}
       />
-      {!current && state.goal && <div className="goal-prev">Ultima volta: {state.goal} {state.done && '✓'}</div>}
+      {!current && state.goal && <div className="goal-prev">{t('Last time: {goal}', { goal: state.goal })} {state.done && '✓'}</div>}
     </div>
   );
 }
 
 registerWidget({
   type: 'goal',
-  label: 'Obiettivo',
+  label: 'Goal',
   icon: '🎯',
   category: 'notes',
   defaultSize: { w: 290, h: 150 },

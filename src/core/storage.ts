@@ -1,5 +1,6 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { THEMES } from './themes';
+import { isLang } from './i18n';
 import { CATEGORY_IDS, DEFAULT_SETTINGS, SCHEMA_VERSION, type AppData, type Settings } from './types';
 
 export interface Storage {
@@ -36,6 +37,7 @@ function migrateSettings(raw: unknown): Settings {
   const merged = { ...DEFAULT_SETTINGS, ...rest, theme: rest.theme ?? (adaptColors ? 'system' : DEFAULT_SETTINGS.theme) };
   // Valori sconosciuti (dati vecchi o rovinati) tornano al predefinito invece di rompere l'interfaccia.
   if (!THEMES.some((t) => t.id === merged.theme)) merged.theme = DEFAULT_SETTINGS.theme;
+  if (!isLang(merged.language)) merged.language = DEFAULT_SETTINGS.language;
   if (merged.drawerStyle !== 'tucked' && merged.drawerStyle !== 'slanted') merged.drawerStyle = DEFAULT_SETTINGS.drawerStyle;
   if (merged.activeCategory !== 'all' && !CATEGORY_IDS.includes(merged.activeCategory)) merged.activeCategory = 'all';
   for (const k of ['tilt', 'physics', 'categories', 'searchBar'] as const) if (typeof merged[k] !== 'boolean') merged[k] = DEFAULT_SETTINGS[k];
@@ -56,7 +58,7 @@ export function sanitize(raw: unknown): AppData | undefined {
     .filter((w) => w && typeof w === 'object' && typeof w.id === 'string')
     .map((w, i) => ({
       id: w.id,
-      name: typeof w.name === 'string' ? w.name : `Spazio ${i + 1}`,
+      name: typeof w.name === 'string' ? w.name : `Space ${i + 1}`,
       order: isNum(w.order) ? w.order : i,
       widgets: (Array.isArray(w.widgets) ? w.widgets : [])
         .filter((x) => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.type === 'string' && isNum(x.x) && isNum(x.y) && isNum(x.w) && isNum(x.h))
@@ -86,7 +88,7 @@ export function createDefaultData(): AppData {
     version: SCHEMA_VERSION,
     activeWorkspaceId: id,
     settings: { ...DEFAULT_SETTINGS },
-    workspaces: [{ id, name: 'Spazio 1', order: 0, widgets: [] }],
+    workspaces: [{ id, name: 'Space 1', order: 0, widgets: [] }],
   };
 }
 

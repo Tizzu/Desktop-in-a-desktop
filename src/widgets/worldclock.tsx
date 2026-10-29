@@ -1,15 +1,16 @@
 import { useTick } from './timerCore';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT, useLocale } from '../core/i18n';
 
 interface WorldState { zones: string[] }
 
 const PRESETS: Record<string, string> = {
-  'Europe/Rome': 'Roma',
-  'Europe/London': 'Londra',
+  'Europe/Rome': 'Rome',
+  'Europe/London': 'London',
   'America/New_York': 'New York',
   'America/Los_Angeles': 'Los Angeles',
-  'America/Sao_Paulo': 'San Paolo',
-  'Africa/Cairo': 'Il Cairo',
+  'America/Sao_Paulo': 'São Paulo',
+  'Africa/Cairo': 'Cairo',
   'Asia/Dubai': 'Dubai',
   'Asia/Kolkata': 'Mumbai',
   'Asia/Shanghai': 'Shanghai',
@@ -19,6 +20,8 @@ const PRESETS: Record<string, string> = {
 };
 
 function WorldClock({ state, onChange }: WidgetProps<WorldState>) {
+  const t = useT();
+  const locale = useLocale();
   useTick(true, 1000);
   const now = new Date();
   const free = Object.keys(PRESETS).filter((z) => !state.zones.includes(z));
@@ -27,17 +30,17 @@ function WorldClock({ state, onChange }: WidgetProps<WorldState>) {
       <ul>
         {state.zones.map((z) => (
           <li key={z}>
-            <span>{PRESETS[z] ?? z}</span>
-            <span className="muted">{now.toLocaleDateString('it-IT', { timeZone: z, weekday: 'short' })}</span>
-            <strong>{now.toLocaleTimeString('it-IT', { timeZone: z, hour: '2-digit', minute: '2-digit' })}</strong>
-            <button className="icon-btn" aria-label={`Rimuovi ${PRESETS[z] ?? z}`} onClick={() => onChange({ zones: state.zones.filter((x) => x !== z) })}>×</button>
+            <span>{t(PRESETS[z] ?? z)}</span>
+            <span className="muted">{now.toLocaleDateString(locale, { timeZone: z, weekday: 'short' })}</span>
+            <strong>{now.toLocaleTimeString(locale, { timeZone: z, hour: '2-digit', minute: '2-digit' })}</strong>
+            <button className="icon-btn" aria-label={t('Remove {city}', { city: t(PRESETS[z] ?? z) })} onClick={() => onChange({ zones: state.zones.filter((x) => x !== z) })}>×</button>
           </li>
         ))}
       </ul>
       {free.length > 0 && (
-        <select value="" aria-label="Aggiungi città" onChange={(e) => e.target.value && onChange({ zones: [...state.zones, e.target.value] })}>
-          <option value="">+ Aggiungi città…</option>
-          {free.map((z) => <option key={z} value={z}>{PRESETS[z]}</option>)}
+        <select value="" aria-label={t('Add city')} onChange={(e) => e.target.value && onChange({ zones: [...state.zones, e.target.value] })}>
+          <option value="">{t('+ Add city…')}</option>
+          {free.map((z) => <option key={z} value={z}>{t(PRESETS[z]!)}</option>)}
         </select>
       )}
     </div>
@@ -46,7 +49,7 @@ function WorldClock({ state, onChange }: WidgetProps<WorldState>) {
 
 registerWidget({
   type: 'worldclock',
-  label: 'Fusi orari',
+  label: 'World clock',
   icon: '🌍',
   category: 'time',
   defaultSize: { w: 270, h: 230 },

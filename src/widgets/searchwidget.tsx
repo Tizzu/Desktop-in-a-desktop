@@ -3,7 +3,7 @@ import { registerWidget } from './registry';
 
 registerWidget({
   type: 'search',
-  label: 'Ricerca',
+  label: 'Search',
   icon: '🔍',
   category: 'media',
   defaultSize: { w: 380, h: 96 },

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface WheelState { options: string; /** Ultimo estratto. */ result: string }
 
@@ -7,6 +8,7 @@ const COLORS = ['#e9a23b', '#c8693f', '#7a9e6b', '#5b8a9e', '#a37fb0', '#d97a8a'
 const SPIN_MS = 3200;
 
 function Wheel({ state, onChange }: WidgetProps<WheelState>) {
+  const t = useT();
   const [angle, setAngle] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const opts = state.options.split('\n').map((o) => o.trim()).filter(Boolean);
@@ -42,18 +44,18 @@ function Wheel({ state, onChange }: WidgetProps<WheelState>) {
         </svg>
       </div>
       <div className="wheel-result" aria-live="polite">{state.result ? `👉 ${state.result}` : ' '}</div>
-      <button className="btn primary" disabled={n < 2 || spinning} onClick={spin}>Gira</button>
-      <textarea value={state.options} aria-label="Opzioni, una per riga" placeholder={'Una opzione per riga\nPizza\nSushi'} onChange={(e) => onChange({ ...state, options: e.target.value })} />
+      <button className="btn primary" disabled={n < 2 || spinning} onClick={spin}>{t('Spin')}</button>
+      <textarea value={state.options} aria-label={t('Options, one per line')} placeholder={t('One option per line\nPizza\nSushi')} onChange={(e) => onChange({ ...state, options: e.target.value })} />
     </div>
   );
 }
 
 registerWidget({
   type: 'wheel',
-  label: 'Ruota della fortuna',
+  label: 'Wheel of fortune',
   icon: '🎡',
   category: 'fun',
   defaultSize: { w: 270, h: 410 },
-  initialState: () => ({ options: 'Pizza\nSushi\nInsalata\nPasta', result: '' }),
+  initialState: () => ({ options: 'Pizza\nSushi\nSalad\nPasta', result: '' }),
   Component: Wheel,
 });

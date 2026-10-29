@@ -6,7 +6,7 @@ test('dati salvati rovinati non lasciano la pagina bianca', async ({ page }) => 
   await seed(page, { workspaces: 'rotto', activeWorkspaceId: 42 });
   await expect(page.locator('.drawer-item').first()).toBeVisible();
   await expect(page.locator('.tab.active')).toBeVisible();
-  await dragToolTo(page, 'Post-it', 400, 250); // e l'app resta utilizzabile
+  await dragToolTo(page, 'Sticky note', 400, 250); // e l'app resta utilizzabile
   await expect(widgets(page)).toHaveCount(1);
 });
 
@@ -22,14 +22,14 @@ test('un widget che va in errore non blocca gli altri', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   // I widget stanno sotto la fascia in cui i tool sporgono dalla barra, che altrimenti ne coprirebbe i pulsanti.
-  // La lista "Da fare" si aspetta un array: con `null` il rendering lancia un errore.
+  // La lista "To do" si aspetta un array: con `null` il rendering lancia un errore.
   await seed(page, appData([widgetAt('rotto', 'todo', 20, 160, { items: null }), widgetAt('sano', 'postit', 320, 160, { text: 'funziono' })]));
 
   await expect(widgets(page)).toHaveCount(2);
   await expect(page.locator('.widget-error')).toHaveCount(1);
-  await expect(page.getByRole('alert')).toContainText('ha avuto un problema');
+  await expect(page.getByRole('alert')).toContainText('ran into a problem');
   await expect(widgets(page).nth(1).locator('textarea')).toHaveValue('funziono');
-  await page.getByRole('button', { name: 'Rimuovi widget' }).first().click(); // il widget rotto si può togliere
+  await page.getByRole('button', { name: 'Remove widget' }).first().click(); // il widget rotto si può togliere
   await expect(page.locator('.widget-error')).toHaveCount(0);
   await expect(widgets(page)).toHaveCount(1);
   expect(errors.length).toBeGreaterThan(0); // l'errore è stato registrato, non nascosto
@@ -45,7 +45,7 @@ test('con il database bloccato l\'app si apre e conserva i dati nella copia di s
   await page.goto('/newtab.html');
   await page.locator('.drawer-item').first().waitFor();
 
-  await dragToolTo(page, 'Post-it', 400, 250);
+  await dragToolTo(page, 'Sticky note', 400, 250);
   await widgets(page).first().locator('textarea').fill('salvato altrove');
   await page.waitForTimeout(500);
 

@@ -14,4 +14,4 @@ export function splitBill(total: number, people: number, tipPercent: number) {
   return { withTip, each: Math.ceil((withTip / n) * 100 - 1e-9) / 100 };
 }
 
-export const euro = (n: number) => n.toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
+export const euro = (n: number, locale = 'en-GB') => n.toLocaleString(locale, { style: 'currency', currency: 'EUR' });

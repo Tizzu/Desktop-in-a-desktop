@@ -5,12 +5,12 @@ interface GratitudeState { entries: Record<string, string[]> }
 
 registerWidget({
   type: 'gratitude',
-  label: 'Gratitudine',
+  label: 'Gratitude',
   icon: '🙏',
   category: 'wellbeing',
   defaultSize: { w: 280, h: 220 },
   initialState: () => ({ entries: {} }),
   Component: ({ state, onChange }: WidgetProps<GratitudeState>) => (
-    <DayEntries entries={state.entries} lines={3} placeholder="Oggi sono grato per" onChange={(entries) => onChange({ entries })} />
+    <DayEntries entries={state.entries} lines={3} placeholder={'Today I am grateful for'} onChange={(entries) => onChange({ entries })} />
   ),
 });

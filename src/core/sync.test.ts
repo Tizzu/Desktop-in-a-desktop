@@ -12,7 +12,7 @@ describe('prepare / toShared', () => {
     const s = createDefaultData();
     const a = prepare({ type: 'addWorkspace' }, s) as Extract<Action, { type: 'addWorkspace' }>;
     expect(a.id).toBeTruthy();
-    expect(a.name).toBe('Spazio 2');
+    expect(a.name).toBe('Space 2');
     expect(a.order).toBe(1);
     expect(a.activate).toBe(true);
     const w = prepare({ type: 'updateWidget', id: 'x', patch: {} }, s) as Extract<Action, { type: 'updateWidget' }>;
@@ -56,7 +56,7 @@ describe('mergeRemoteState', () => {
 describe('due schede restano coerenti', () => {
   it('modifiche su spazi e widget diversi, in ordini diversi, convergono allo stesso stato', () => {
     let base = createDefaultData();
-    base = reducer(base, { type: 'addWorkspace', id: 'w2', name: 'Spazio 2', order: 1, activate: false });
+    base = reducer(base, { type: 'addWorkspace', id: 'w2', name: 'Space 2', order: 1, activate: false });
     const w1 = base.workspaces[0]!.id;
 
     // Scheda A guarda lo spazio 1, scheda B lo spazio 2.

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface Card { id: string; q: string; a: string; known: boolean }
 interface FlashState { cards: Card[] }
 
 function Flashcards({ state, onChange }: WidgetProps<FlashState>) {
+  const t = useT();
   const [q, setQ] = useState('');
   const [a, setA] = useState('');
   const [shown, setShown] = useState(false);
@@ -28,11 +30,11 @@ function Flashcards({ state, onChange }: WidgetProps<FlashState>) {
   if (adding) {
     return (
       <div className="todo">
-        <input value={q} placeholder="Domanda" aria-label="Domanda" onChange={(e) => setQ(e.target.value)} />
-        <input value={a} placeholder="Risposta" aria-label="Risposta" onChange={(e) => setA(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+        <input value={q} placeholder={t('Question')} aria-label={t('Question')} onChange={(e) => setQ(e.target.value)} />
+        <input value={a} placeholder={t('Answer')} aria-label={t('Answer')} onChange={(e) => setA(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
         <div className="timer-actions">
-          <button className="btn primary" disabled={!q.trim() || !a.trim()} onClick={add}>Aggiungi</button>
-          <button className="btn" onClick={() => setAdding(false)}>Ripassa ({state.cards.length})</button>
+          <button className="btn primary" disabled={!q.trim() || !a.trim()} onClick={add}>{t('Add')}</button>
+          <button className="btn" onClick={() => setAdding(false)}>{t('Review')} ({state.cards.length})</button>
         </div>
       </div>
     );
@@ -41,19 +43,19 @@ function Flashcards({ state, onChange }: WidgetProps<FlashState>) {
     <div className="flash">
       {card ? (
         <>
-          <button className="flash-card" aria-label="Gira la scheda" onClick={() => setShown(!shown)}>{shown ? card.a : card.q}</button>
+          <button className="flash-card" aria-label={t('Flip the card')} onClick={() => setShown(!shown)}>{shown ? card.a : card.q}</button>
           <div className="timer-actions">
-            <button className="btn" onClick={() => mark(false)}>Da rivedere</button>
-            <button className="btn primary" onClick={() => mark(true)}>Lo so</button>
+            <button className="btn" onClick={() => mark(false)}>{t('Review again')}</button>
+            <button className="btn primary" onClick={() => mark(true)}>{t('I know it')}</button>
           </div>
-          <div className="timer-note">{todo.length} da ripassare</div>
+          <div className="timer-note">{t('{n} to review', { n: todo.length })}</div>
         </>
       ) : (
-        <div className="timer-note">{state.cards.length ? 'Le sai tutte 🎉' : 'Nessuna scheda'}</div>
+        <div className="timer-note">{state.cards.length ? t('You know them all 🎉') : t('No cards')}</div>
       )}
       <div className="timer-actions">
-        <button className="chip" onClick={() => setAdding(true)}>Aggiungi</button>
-        {state.cards.some((c) => c.known) && <button className="chip" onClick={() => onChange({ cards: state.cards.map((c) => ({ ...c, known: false })) })}>Ricomincia</button>}
+        <button className="chip" onClick={() => setAdding(true)}>{t('Add')}</button>
+        {state.cards.some((c) => c.known) && <button className="chip" onClick={() => onChange({ cards: state.cards.map((c) => ({ ...c, known: false })) })}>{t('Start over')}</button>}
       </div>
     </div>
   );
@@ -61,7 +63,7 @@ function Flashcards({ state, onChange }: WidgetProps<FlashState>) {
 
 registerWidget({
   type: 'flashcards',
-  label: 'Schede di ripasso',
+  label: 'Flashcards',
   icon: '🃏',
   category: 'notes',
   defaultSize: { w: 280, h: 260 },

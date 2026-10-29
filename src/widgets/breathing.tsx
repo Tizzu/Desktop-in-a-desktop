@@ -1,22 +1,24 @@
 import { useEffect, useState } from 'react';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface BreathingState { pattern: string }
 interface Step { label: string; secs: number; scale: number }
 
 const FULL = 1, SMALL = 0.45;
 const PATTERNS: Record<string, { label: string; steps: Step[] }> = {
-  calm: { label: 'Calma 5-5', steps: [{ label: 'Inspira', secs: 5, scale: FULL }, { label: 'Espira', secs: 5, scale: SMALL }] },
-  box: { label: 'Quadrato 4-4-4-4', steps: [
-    { label: 'Inspira', secs: 4, scale: FULL }, { label: 'Trattieni', secs: 4, scale: FULL },
-    { label: 'Espira', secs: 4, scale: SMALL }, { label: 'Trattieni', secs: 4, scale: SMALL },
+  calm: { label: 'Calm 5-5', steps: [{ label: 'Breathe in', secs: 5, scale: FULL }, { label: 'Breathe out', secs: 5, scale: SMALL }] },
+  box: { label: 'Box 4-4-4-4', steps: [
+    { label: 'Breathe in', secs: 4, scale: FULL }, { label: 'Hold', secs: 4, scale: FULL },
+    { label: 'Breathe out', secs: 4, scale: SMALL }, { label: 'Hold', secs: 4, scale: SMALL },
   ] },
-  relax: { label: 'Rilassante 4-7-8', steps: [
-    { label: 'Inspira', secs: 4, scale: FULL }, { label: 'Trattieni', secs: 7, scale: FULL }, { label: 'Espira', secs: 8, scale: SMALL },
+  relax: { label: 'Relaxing 4-7-8', steps: [
+    { label: 'Breathe in', secs: 4, scale: FULL }, { label: 'Hold', secs: 7, scale: FULL }, { label: 'Breathe out', secs: 8, scale: SMALL },
   ] },
 };
 
 function Breathing({ state, onChange }: WidgetProps<BreathingState>) {
+  const t = useT();
   const pattern = PATTERNS[state.pattern] ?? PATTERNS.calm!;
   const [running, setRunning] = useState(false);
   const [idx, setIdx] = useState(0);
@@ -37,19 +39,19 @@ function Breathing({ state, onChange }: WidgetProps<BreathingState>) {
           className="breath-orb"
           style={{ transform: `scale(${running ? step.scale : 0.7})`, transitionDuration: running ? `${step.secs}s` : '.5s' }}
         />
-        <span className="breath-label">{running ? step.label : 'Pronto'}</span>
+        <span className="breath-label">{running ? t(step.label) : t('Ready')}</span>
       </div>
-      <select value={state.pattern} aria-label="Schema" onChange={(e) => { setRunning(false); onChange({ pattern: e.target.value }); }}>
-        {Object.entries(PATTERNS).map(([id, p]) => <option key={id} value={id}>{p.label}</option>)}
+      <select value={state.pattern} aria-label={t('Pattern')} onChange={(e) => { setRunning(false); onChange({ pattern: e.target.value }); }}>
+        {Object.entries(PATTERNS).map(([id, p]) => <option key={id} value={id}>{t(p.label)}</option>)}
       </select>
-      <button className="btn primary" onClick={toggle}>{running ? 'Ferma' : 'Respira'}</button>
+      <button className="btn primary" onClick={toggle}>{running ? t('Stop') : t('Breathe')}</button>
     </div>
   );
 }
 
 registerWidget({
   type: 'breathing',
-  label: 'Respiro',
+  label: 'Breathing',
   icon: '🫧',
   category: 'wellbeing',
   defaultSize: { w: 230, h: 290 },

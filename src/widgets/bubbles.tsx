@@ -1,4 +1,5 @@
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface BubblesState { popped: boolean[] }
 
@@ -26,6 +27,7 @@ function popSound() {
 }
 
 function Bubbles({ state, onChange }: WidgetProps<BubblesState>) {
+  const t = useT();
   const popped = state.popped.length === COUNT ? state.popped : fresh();
   const left = popped.filter((p) => !p).length;
   return (
@@ -35,14 +37,14 @@ function Bubbles({ state, onChange }: WidgetProps<BubblesState>) {
           <button
             key={i}
             className={`bubble${p ? ' popped' : ''}`}
-            aria-label={p ? 'Bolla scoppiata' : 'Scoppia la bolla'}
+            aria-label={p ? t('Popped bubble') : t('Pop the bubble')}
             onClick={() => { if (p) return; popSound(); onChange({ popped: popped.map((x, j) => x || j === i) }); }}
           />
         ))}
       </div>
       <footer className="todo-foot">
-        <span>{left === 0 ? 'Tutte scoppiate 🎉' : `${left} rimaste`}</span>
-        <button className="chip" onClick={() => onChange({ popped: fresh() })}>Rigenera</button>
+        <span>{left === 0 ? t('All popped 🎉') : t('{n} left', { n: left })}</span>
+        <button className="chip" onClick={() => onChange({ popped: fresh() })}>{t('Refill')}</button>
       </footer>
     </div>
   );
@@ -50,7 +52,7 @@ function Bubbles({ state, onChange }: WidgetProps<BubblesState>) {
 
 registerWidget({
   type: 'bubbles',
-  label: 'Bolle',
+  label: 'Bubbles',
   icon: '🫧',
   category: 'fun',
   defaultSize: { w: 290, h: 240 },

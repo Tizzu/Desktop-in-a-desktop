@@ -8,7 +8,7 @@ test('due schede aperte restano allineate', async ({ context }) => {
   await openApp(b);
 
   // Un widget creato in A compare in B.
-  await dragToolTo(a, 'Post-it', 400, 250);
+  await dragToolTo(a, 'Sticky note', 400, 250);
   await expect(widgets(a)).toHaveCount(1);
   await expect(widgets(b)).toHaveCount(1);
 
@@ -24,7 +24,7 @@ test('due schede aperte restano allineate', async ({ context }) => {
   await expect(widgets(b).first().locator('textarea')).toHaveValue('ciao da A');
 
   // Eliminarlo in B lo elimina in A.
-  await widgets(b).first().getByRole('button', { name: 'Rimuovi widget' }).click();
+  await widgets(b).first().getByRole('button', { name: 'Remove widget' }).click();
   await expect(widgets(a)).toHaveCount(0);
 });
 
@@ -34,23 +34,23 @@ test('ogni scheda guarda lo spazio che vuole, ma la lista degli spazi è condivi
   const b = await context.newPage();
   await openApp(b);
 
-  await a.getByRole('button', { name: 'Nuovo spazio' }).click(); // A passa allo spazio 2
-  await expect(a.locator('.tab.active')).toContainText('Spazio 2');
-  await expect(b.getByRole('button', { name: 'Spazio 2', exact: true })).toBeVisible(); // B lo vede...
-  await expect(b.locator('.tab.active')).toContainText('Spazio 1'); // ...ma resta dov'era
+  await a.getByRole('button', { name: 'New space' }).click(); // A passa allo spazio 2
+  await expect(a.locator('.tab.active')).toContainText('Space 2');
+  await expect(b.getByRole('button', { name: 'Space 2', exact: true })).toBeVisible(); // B lo vede...
+  await expect(b.locator('.tab.active')).toContainText('Space 1'); // ...ma resta dov'era
 
-  await dragToolTo(a, 'Taccuino', 400, 250); // in A, spazio 2
+  await dragToolTo(a, 'Notebook', 400, 250); // in A, spazio 2
   await expect(widgets(a)).toHaveCount(1);
   await expect(widgets(b)).toHaveCount(0); // B guarda lo spazio 1: nessun widget
-  await b.getByRole('button', { name: 'Spazio 2', exact: true }).click();
+  await b.getByRole('button', { name: 'Space 2', exact: true }).click();
   await expect(widgets(b)).toHaveCount(1);
-  await expect(widgets(b).first().locator('.widget-bar')).toContainText('Taccuino');
+  await expect(widgets(b).first().locator('.widget-bar')).toContainText('Notebook');
 });
 
 test('una scheda aperta subito dopo una modifica riceve lo stato aggiornato', async ({ context }) => {
   const a = await context.newPage();
   await openApp(a);
-  await dragToolTo(a, 'Post-it', 400, 250);
+  await dragToolTo(a, 'Sticky note', 400, 250);
   await widgets(a).first().locator('textarea').fill('appena scritto');
 
   const c = await context.newPage(); // aperta prima che il salvataggio (300 ms) sia completato
@@ -65,11 +65,11 @@ test('le impostazioni condivise si propagano, quelle locali no', async ({ contex
   const b = await context.newPage();
   await openApp(b);
 
-  await a.getByRole('button', { name: 'Impostazioni' }).click();
-  await a.getByRole('radio', { name: 'Mare' }).click();
+  await a.getByRole('button', { name: 'Settings' }).click();
+  await a.getByRole('radio', { name: 'Sea' }).click();
   await expect(b.locator('html')).toHaveAttribute('data-theme', 'sea');
 
-  await a.getByRole('tab', { name: 'Tempo' }).click(); // cassetto aperto: solo in questa scheda
-  await expect(a.locator('.cat.on')).toHaveAttribute('title', 'Tempo');
-  await expect(b.locator('.cat.on')).toHaveAttribute('title', 'Tutti');
+  await a.getByRole('tab', { name: 'Time' }).click(); // cassetto aperto: solo in questa scheda
+  await expect(a.locator('.cat.on')).toHaveAttribute('title', 'Time');
+  await expect(b.locator('.cat.on')).toHaveAttribute('title', 'All');
 });

@@ -1,5 +1,6 @@
 import { clearAlarm, formatClock, setAlarm, useTick } from './timerCore';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 type Phase = 'focus' | 'short' | 'long';
 
@@ -12,9 +13,10 @@ interface PomodoroState {
 }
 
 const DURATION: Record<Phase, number> = { focus: 25 * 60_000, short: 5 * 60_000, long: 15 * 60_000 };
-const LABEL: Record<Phase, string> = { focus: 'Concentrazione', short: 'Pausa breve', long: 'Pausa lunga' };
+const LABEL: Record<Phase, string> = { focus: 'Focus', short: 'Short break', long: 'Long break' };
 
 function Pomodoro({ state, onChange }: WidgetProps<PomodoroState>) {
+  const t = useT();
   const running = state.endsAt !== null;
   useTick(running);
   const remaining = running ? Math.max(0, state.endsAt! - Date.now()) : (state.left ?? DURATION[state.phase]);
@@ -44,18 +46,18 @@ function Pomodoro({ state, onChange }: WidgetProps<PomodoroState>) {
   const cycle = state.done % 4;
   return (
     <div className="timer">
-      <div className="timer-note">{LABEL[state.phase]}</div>
+      <div className="timer-note">{t(LABEL[state.phase])}</div>
       <div className={`timer-time${finished ? ' done' : ''}`}>{formatClock(remaining)}</div>
-      <div className="pomo-dots" aria-label={`${cycle} sessioni su 4`}>
+      <div className="pomo-dots" aria-label={t('{n} of 4 sessions', { n: cycle })}>
         {[0, 1, 2, 3].map((i) => <span key={i} className={i < cycle ? 'on' : ''} />)}
       </div>
       <div className="timer-actions">
         {finished ? (
-          <button className="btn primary" onClick={next}>Avanti</button>
+          <button className="btn primary" onClick={next}>{t('Next')}</button>
         ) : (
           <>
-            <button className="btn primary" onClick={running ? pause : start}>{running ? 'Pausa' : idle ? 'Avvia' : 'Riprendi'}</button>
-            {idle ? <button className="btn" onClick={next}>Salta</button> : <button className="btn" onClick={reset}>Azzera</button>}
+            <button className="btn primary" onClick={running ? pause : start}>{running ? t('Pause') : idle ? t('Start') : t('Resume')}</button>
+            {idle ? <button className="btn" onClick={next}>{t('Skip')}</button> : <button className="btn" onClick={reset}>{t('Reset')}</button>}
           </>
         )}
       </div>

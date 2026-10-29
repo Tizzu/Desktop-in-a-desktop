@@ -1,5 +1,6 @@
 import { clearAlarm, formatClock, setAlarm, useTick } from './timerCore';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface TimerState {
   /** Durata impostata, in ms. */
@@ -13,6 +14,7 @@ interface TimerState {
 const PRESETS = [5, 15, 25];
 
 function Timer({ state, onChange }: WidgetProps<TimerState>) {
+  const t = useT();
   const running = state.endsAt !== null;
 
   useTick(running);
@@ -45,25 +47,25 @@ function Timer({ state, onChange }: WidgetProps<TimerState>) {
       <div className="timer-bar"><div style={{ width: `${(remaining / state.duration) * 100}%` }} /></div>
       {idle ? (
         <div className="timer-set">
-          <input type="number" min={0} max={999} value={minutes} aria-label="Minuti"
+          <input type="number" min={0} max={999} value={minutes} aria-label={t('Minutes')}
             onChange={(e) => setDuration(Number(e.target.value) || 0, seconds)} />
           <span>:</span>
-          <input type="number" min={0} max={59} value={seconds} aria-label="Secondi"
+          <input type="number" min={0} max={59} value={seconds} aria-label={t('Seconds')}
             onChange={(e) => setDuration(minutes, Math.min(59, Number(e.target.value) || 0))} />
           {PRESETS.map((p) => (
             <button key={p} className="chip" onClick={() => setDuration(p, 0)}>{p}′</button>
           ))}
         </div>
       ) : (
-        <div className="timer-note">{finished ? 'Tempo scaduto' : running ? 'In corso' : 'In pausa'}</div>
+        <div className="timer-note">{finished ? t('Time is up') : running ? t('Running') : t('Paused')}</div>
       )}
       <div className="timer-actions">
         {!finished && (
           <button className="btn primary" onClick={running ? pause : start}>
-            {running ? 'Pausa' : idle ? 'Avvia' : 'Riprendi'}
+            {running ? t('Pause') : idle ? t('Start') : t('Resume')}
           </button>
         )}
-        {!idle && <button className="btn" onClick={reset}>{finished ? 'Ricomincia' : 'Azzera'}</button>}
+        {!idle && <button className="btn" onClick={reset}>{finished ? t('Restart') : t('Reset')}</button>}
       </div>
     </div>
   );

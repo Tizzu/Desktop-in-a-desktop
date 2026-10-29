@@ -29,5 +29,5 @@
     "wxt": "^0.21.5"
   },
   "license": "MIT",
-  "description": "Estensione per browser Chromium: una scrivania a widget al posto della nuova scheda, tutta locale."
+  "description": "Chromium extension: a desk of widgets in place of the new tab page, fully local."
 }

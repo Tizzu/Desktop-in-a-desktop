@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { canMove, emptyGrid, slide, spawn, type Grid } from './games';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface G2048State { grid: Grid; score: number; best: number }
 
@@ -8,6 +9,7 @@ const fresh = (best = 0): G2048State => ({ grid: spawn(spawn(emptyGrid())), scor
 const KEYS: Record<string, 'left' | 'right' | 'up' | 'down'> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 
 function Game2048({ state, onChange }: WidgetProps<G2048State>) {
+  const t = useT();
   const over = !canMove(state.grid);
 
   const play = (dir: 'left' | 'right' | 'up' | 'down') => {
@@ -21,14 +23,14 @@ function Game2048({ state, onChange }: WidgetProps<G2048State>) {
   return (
     <div className="g2048">
       <div className="g2048-head">
-        <span>Punti <b>{state.score}</b> · record <b>{state.best}</b></span>
-        <button className="chip" onClick={() => onChange(fresh(state.best))}>Nuova</button>
+        <span>{t('Score')} <b>{state.score}</b> · {t('best')} <b>{state.best}</b></span>
+        <button className="chip" onClick={() => onChange(fresh(state.best))}>{t('New')}</button>
       </div>
       <div
         className="g2048-grid"
         tabIndex={0}
         role="application"
-        aria-label="2048: usa le frecce o trascina"
+        aria-label={t('2048: use the arrow keys or drag')}
         onKeyDown={(e) => { const d = KEYS[e.key]; if (d) { e.preventDefault(); play(d); } }}
         onPointerDown={(e) => { touch.current = { x: e.clientX, y: e.clientY }; }}
         onPointerUp={(e) => {
@@ -40,7 +42,7 @@ function Game2048({ state, onChange }: WidgetProps<G2048State>) {
         }}
       >
         {state.grid.flat().map((v, i) => <div key={i} className={`t t${Math.min(v, 2048)}`}>{v || ''}</div>)}
-        {over && <div className="g2048-over">Finita! <button className="btn primary" onClick={() => onChange(fresh(state.best))}>Ancora</button></div>}
+        {over && <div className="g2048-over">{t('Game over!')} <button className="btn primary" onClick={() => onChange(fresh(state.best))}>{t('Again')}</button></div>}
       </div>
     </div>
   );

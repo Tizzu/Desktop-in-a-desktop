@@ -6,7 +6,7 @@ export function prepare(a: Action, s: AppData): Action {
   switch (a.type) {
     case 'addWorkspace': {
       const order = a.order ?? s.workspaces.reduce((m, w) => Math.max(m, w.order), -1) + 1;
-      return { ...a, id: a.id ?? crypto.randomUUID(), order, name: a.name ?? `Spazio ${order + 1}`, activate: a.activate ?? true };
+      return { ...a, id: a.id ?? crypto.randomUUID(), order, name: a.name ?? `Space ${order + 1}`, activate: a.activate ?? true };
     }
     case 'addWidget':
     case 'updateWidget':

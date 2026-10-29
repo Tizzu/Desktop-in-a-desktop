@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { dayKey } from './dates';
 import { useToday } from './useToday';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT, useLocale } from '../core/i18n';
 
 interface CalendarState { marked: string[] }
 
-const WEEK = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
-
 function Calendar({ state, onChange }: WidgetProps<CalendarState>) {
+  const t = useT();
+  const locale = useLocale();
   useToday(); // ridisegna allo scoccare della mezzanotte
   const now = new Date();
   const [view, setView] = useState({ y: now.getFullYear(), m: now.getMonth() });
@@ -23,14 +24,14 @@ function Calendar({ state, onChange }: WidgetProps<CalendarState>) {
   return (
     <div className="cal">
       <div className="cal-head">
-        <button className="icon-btn" aria-label="Mese precedente" onClick={() => shift(-1)}>‹</button>
-        <button className="cal-title" title="Torna a oggi" onClick={() => setView({ y: now.getFullYear(), m: now.getMonth() })}>
-          {first.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
+        <button className="icon-btn" aria-label={t('Previous month')} onClick={() => shift(-1)}>‹</button>
+        <button className="cal-title" title={t('Back to today')} onClick={() => setView({ y: now.getFullYear(), m: now.getMonth() })}>
+          {first.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
         </button>
-        <button className="icon-btn" aria-label="Mese successivo" onClick={() => shift(1)}>›</button>
+        <button className="icon-btn" aria-label={t('Next month')} onClick={() => shift(1)}>›</button>
       </div>
       <div className="cal-grid">
-        {WEEK.map((d, i) => <span key={i} className="cal-wd">{d}</span>)}
+        {Array.from({ length: 7 }, (_, i) => <span key={i} className="cal-wd">{new Date(2024, 0, 1 + i).toLocaleDateString(locale, { weekday: 'narrow' }).toUpperCase()}</span>)}
         {Array.from({ length: lead }, (_, i) => <span key={`b${i}`} />)}
         {Array.from({ length: days }, (_, i) => {
           const key = dayKey(new Date(view.y, view.m, i + 1));
@@ -47,7 +48,7 @@ function Calendar({ state, onChange }: WidgetProps<CalendarState>) {
 
 registerWidget({
   type: 'calendar',
-  label: 'Calendario',
+  label: 'Calendar',
   icon: '📅',
   category: 'time',
   defaultSize: { w: 270, h: 280 },

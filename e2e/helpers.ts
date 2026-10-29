@@ -48,14 +48,14 @@ export async function settled(w: Locator) {
 
 // --- Dati di partenza scritti direttamente nel database, per provare casi che a mano sono scomodi ---
 
-export const DEFAULT_SETTINGS = { tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, theme: 'warm', activeCategory: 'all' };
+export const DEFAULT_SETTINGS = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, theme: 'warm', activeCategory: 'all' };
 
 export function appData(widgetList: unknown[], settings: Record<string, unknown> = {}) {
   return {
     version: 2,
     activeWorkspaceId: 'w',
     settings: { ...DEFAULT_SETTINGS, ...settings },
-    workspaces: [{ id: 'w', name: 'Spazio 1', order: 0, widgets: widgetList }],
+    workspaces: [{ id: 'w', name: 'Space 1', order: 0, widgets: widgetList }],
   };
 }
 

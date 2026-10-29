@@ -11,7 +11,7 @@ test.describe('tool ritratti sopra i widget', () => {
     expect(await retracted.count()).toBeLessThan(total);
 
     // Il pulsante × del widget in alto a sinistra è cliccabile e rimuove il widget.
-    await page.locator('.canvas .widget').getByRole('button', { name: 'Rimuovi widget' }).click({ timeout: 3000 });
+    await page.locator('.canvas .widget').getByRole('button', { name: 'Remove widget' }).click({ timeout: 3000 });
     await expect(page.locator('.canvas .widget')).toHaveCount(0);
     await expect(retracted).toHaveCount(0);
   });
@@ -31,62 +31,62 @@ test.describe('widget aggiuntivi', () => {
   test('promemoria: aggiunge e toglie una voce', async ({ page }) => {
     await openApp(page);
     await seed(page, appData([], { tilt: false }));
-    const w = await addWidget(page, 'Promemoria');
-    await w.getByLabel('Testo').fill('chiamare Anna');
-    await w.getByLabel('Quando').fill('2030-05-01T09:30');
-    await w.getByRole('button', { name: 'Aggiungi' }).click();
+    const w = await addWidget(page, 'Reminders');
+    await w.getByLabel('Text').fill('chiamare Anna');
+    await w.getByLabel('When').fill('2030-05-01T09:30');
+    await w.getByRole('button', { name: 'Add' }).click();
     await expect(w.locator('.todo-list li')).toContainText('chiamare Anna');
-    await w.getByRole('button', { name: 'Elimina' }).click();
+    await w.getByRole('button', { name: 'Delete' }).click();
     await expect(w.locator('.todo-list li')).toHaveCount(0);
   });
 
   test('conto alla rovescia: mostra i giorni che mancano', async ({ page }) => {
     await page.clock.install({ time: new Date(2026, 9, 28, 10, 0, 0) });
     await openApp(page);
-    const w = await addWidget(page, 'Conto alla rovescia');
-    await w.getByLabel('Data').fill('2026-11-02T12:00');
+    const w = await addWidget(page, 'Countdown');
+    await w.getByLabel('Date').fill('2026-11-02T12:00');
     await expect(w.locator('.countdown-value b').first()).toHaveText('5');
   });
 
   test('bacheca: la carta passa da una colonna all’altra e resta dopo il ricaricamento', async ({ page }) => {
     await openApp(page);
     await seed(page, appData([], { tilt: false }));
-    const w = await addWidget(page, 'Bacheca');
-    await w.getByLabel('Nuova carta').fill('scrivere i test');
-    await w.getByLabel('Nuova carta').press('Enter');
-    await w.getByRole('button', { name: 'Sposta a destra' }).click();
-    await expect(w.getByRole('region', { name: 'In corso' })).toContainText('scrivere i test');
+    const w = await addWidget(page, 'Board');
+    await w.getByLabel('New card').fill('scrivere i test');
+    await w.getByLabel('New card').press('Enter');
+    await w.getByRole('button', { name: 'Move right' }).click();
+    await expect(w.getByRole('region', { name: 'In progress' })).toContainText('scrivere i test');
     await page.waitForTimeout(600);
     await page.reload();
-    await expect(page.getByRole('region', { name: 'In corso' })).toContainText('scrivere i test');
+    await expect(page.getByRole('region', { name: 'In progress' })).toContainText('scrivere i test');
   });
 
   test('spese e dividi il conto fanno i conti', async ({ page }) => {
     await openApp(page);
     await seed(page, appData([], { tilt: false }));
-    const s = await addWidget(page, 'Spese', 300, 250);
-    await s.getByLabel('Importo').fill('20');
-    await s.getByRole('button', { name: '+ Entrata' }).click();
-    await s.getByLabel('Importo').fill('7,5');
-    await s.getByRole('button', { name: '− Spesa' }).click();
-    await expect(s.getByLabel('Saldo')).toContainText('12,50');
+    const s = await addWidget(page, 'Expenses', 300, 250);
+    await s.getByLabel('Amount').fill('20');
+    await s.getByRole('button', { name: '+ Income' }).click();
+    await s.getByLabel('Amount').fill('7.5');
+    await s.getByRole('button', { name: '− Expense' }).click();
+    await expect(s.getByLabel('Balance')).toContainText('12.50');
 
-    const d = await addWidget(page, 'Dividi il conto', 700, 250);
-    await d.getByLabel('Totale').fill('90');
-    await d.getByLabel('persone').fill('3');
-    await expect(d.locator('.counter-value')).toContainText('30,00');
+    const d = await addWidget(page, 'Split the bill', 700, 250);
+    await d.getByLabel('Total').fill('90');
+    await d.getByLabel('people').fill('3');
+    await expect(d.locator('.counter-value')).toContainText('30.00');
   });
 
   test('umore e pianta: si segnano per oggi', async ({ page }) => {
     await openApp(page);
     await seed(page, appData([], { tilt: false }));
-    const m = await addWidget(page, 'Umore', 300, 250);
-    await m.getByRole('button', { name: 'Umore 5 su 5' }).click();
-    await expect(m.getByRole('button', { name: 'Umore 5 su 5' })).toHaveAttribute('aria-pressed', 'true');
+    const m = await addWidget(page, 'Mood', 300, 250);
+    await m.getByRole('button', { name: 'Mood 5 of 5' }).click();
+    await expect(m.getByRole('button', { name: 'Mood 5 of 5' })).toHaveAttribute('aria-pressed', 'true');
 
-    const p = await addWidget(page, 'Pianta', 700, 250);
-    await p.getByRole('button', { name: 'Annaffia' }).click();
-    await expect(p.getByRole('button', { name: /Annaffiata oggi/ })).toBeDisabled();
+    const p = await addWidget(page, 'Plant', 700, 250);
+    await p.getByRole('button', { name: 'Water it' }).click();
+    await expect(p.getByRole('button', { name: /Watered today/ })).toBeDisabled();
   });
 
   test('2048 con le frecce, tris e memory si giocano', async ({ page }) => {
@@ -99,22 +99,22 @@ test.describe('widget aggiuntivi', () => {
     await grid.focus();
     for (const k of ['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowUp']) await grid.press(k);
     expect(await tiles()).toBeGreaterThanOrEqual(2);
-    await expect(g.locator('.g2048-head')).toContainText('Punti');
+    await expect(g.locator('.g2048-head')).toContainText('Score');
 
-    const t = await addWidget(page, 'Tris', 600, 250);
-    for (const i of [1, 4, 2, 5, 3]) await t.getByRole('button', { name: new RegExp(`^Casella ${i}\\b`) }).click();
-    await expect(t).toContainText('Vince X');
+    const t = await addWidget(page, 'Tic-tac-toe', 600, 250);
+    for (const i of [1, 4, 2, 5, 3]) await t.getByRole('button', { name: new RegExp(`^Square ${i}\\b`) }).click();
+    await expect(t).toContainText('X wins');
 
     const m = await addWidget(page, 'Memory', 950, 250);
-    await m.getByRole('button', { name: 'Carta coperta' }).first().click();
-    await expect(m.getByRole('button', { name: 'Carta coperta' })).toHaveCount(15);
+    await m.getByRole('button', { name: 'Face-down card' }).first().click();
+    await expect(m.getByRole('button', { name: 'Face-down card' })).toHaveCount(15);
   });
 
   test('ruota della fortuna estrae una delle opzioni', async ({ page }) => {
     await openApp(page);
     await seed(page, appData([], { tilt: false }));
-    const w = await addWidget(page, 'Ruota della fortuna');
-    await w.getByRole('button', { name: 'Gira' }).click();
-    await expect(w.locator('.wheel-result')).toContainText(/Pizza|Sushi|Insalata|Pasta/, { timeout: 6000 });
+    const w = await addWidget(page, 'Wheel of fortune');
+    await w.getByRole('button', { name: 'Spin' }).click();
+    await expect(w.locator('.wheel-result')).toContainText(/Pizza|Sushi|Salad|Pasta/, { timeout: 6000 });
   });
 });

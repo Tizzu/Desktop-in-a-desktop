@@ -29,7 +29,7 @@ function Calculator({ state, onChange }: WidgetProps<CalcState>) {
 
 registerWidget({
   type: 'calculator',
-  label: 'Calcolatrice',
+  label: 'Calculator',
   icon: '🧮',
   category: 'numbers',
   defaultSize: { w: 230, h: 320 },

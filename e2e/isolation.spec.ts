@@ -35,7 +35,7 @@ test('un sito esterno non può ascoltare né inviare nulla sul canale', async ({
   const received = (p: typeof app) => p.evaluate(() => (window as unknown as { __got: { from: string; kind: string }[] }).__got);
 
   // 1) Ascoltare: l'app invia una modifica. La pagina con la stessa origine la riceve, quella esterna no.
-  await dragToolTo(app, 'Post-it', 400, 250);
+  await dragToolTo(app, 'Sticky note', 400, 250);
   await expect(widgets(app)).toHaveCount(1);
   await expect.poll(async () => (await received(sameOrigin)).length).toBeGreaterThan(0); // il controllo funziona
   await app.waitForTimeout(500);

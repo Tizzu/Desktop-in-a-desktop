@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface AmbientState { volumes: Record<string, number> }
 interface Engine { setVolume: (v: number) => void; stop: () => void }
@@ -84,14 +85,15 @@ function fire(ctx: AudioContext): Engine {
 }
 
 const SOUNDS: { id: string; label: string; icon: string; make: (ctx: AudioContext) => Engine }[] = [
-  { id: 'rain', label: 'Pioggia', icon: '🌧️', make: (c) => simple(c, 'white', [filter(c, 'highpass', 800), filter(c, 'lowpass', 7000)], 0.6) },
-  { id: 'waves', label: 'Onde', icon: '🌊', make: (c) => simple(c, 'brown', [filter(c, 'lowpass', 700)], 0.7, 0.11, 0.7) },
-  { id: 'wind', label: 'Vento', icon: '🍃', make: (c) => simple(c, 'brown', [filter(c, 'bandpass', 500, 0.6)], 0.8, 0.07, 0.6) },
-  { id: 'fire', label: 'Camino', icon: '🔥', make: fire },
-  { id: 'white', label: 'Rumore bianco', icon: '📻', make: (c) => simple(c, 'white', [filter(c, 'lowpass', 12000)], 0.3) },
+  { id: 'rain', label: 'Rain', icon: '🌧️', make: (c) => simple(c, 'white', [filter(c, 'highpass', 800), filter(c, 'lowpass', 7000)], 0.6) },
+  { id: 'waves', label: 'Waves', icon: '🌊', make: (c) => simple(c, 'brown', [filter(c, 'lowpass', 700)], 0.7, 0.11, 0.7) },
+  { id: 'wind', label: 'Wind', icon: '🍃', make: (c) => simple(c, 'brown', [filter(c, 'bandpass', 500, 0.6)], 0.8, 0.07, 0.6) },
+  { id: 'fire', label: 'Fireplace', icon: '🔥', make: fire },
+  { id: 'white', label: 'White noise', icon: '📻', make: (c) => simple(c, 'white', [filter(c, 'lowpass', 12000)], 0.3) },
 ];
 
 function Ambient({ state, onChange }: WidgetProps<AmbientState>) {
+  const t = useT();
   const ctxRef = useRef<AudioContext>(undefined);
   const engines = useRef(new Map<string, Engine>());
   const [on, setOn] = useState<Record<string, boolean>>({});
@@ -131,8 +133,8 @@ function Ambient({ state, onChange }: WidgetProps<AmbientState>) {
     <ul className="ambient">
       {SOUNDS.map((s) => (
         <li key={s.id}>
-          <button className={`chip${on[s.id] ? ' on' : ''}`} aria-pressed={!!on[s.id]} onClick={() => toggle(s.id)}>{s.icon} {s.label}</button>
-          <input type="range" min={0} max={1} step={0.01} value={vol(s.id)} aria-label={`Volume ${s.label}`} onChange={(e) => setVolume(s.id, Number(e.target.value))} />
+          <button className={`chip${on[s.id] ? ' on' : ''}`} aria-pressed={!!on[s.id]} onClick={() => toggle(s.id)}>{s.icon} {t(s.label)}</button>
+          <input type="range" min={0} max={1} step={0.01} value={vol(s.id)} aria-label={t('{sound} volume', { sound: t(s.label) })} onChange={(e) => setVolume(s.id, Number(e.target.value))} />
         </li>
       ))}
     </ul>
@@ -141,7 +143,7 @@ function Ambient({ state, onChange }: WidgetProps<AmbientState>) {
 
 registerWidget({
   type: 'ambient',
-  label: 'Suoni',
+  label: 'Sounds',
   icon: '🎧',
   category: 'wellbeing',
   defaultSize: { w: 260, h: 250 },

@@ -1,5 +1,6 @@
 import { DrawLayer, type Stroke } from './DrawLayer';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface SketchState { strokes: Stroke[]; ink: string; size: number }
 
@@ -9,6 +10,7 @@ const SIZES = [2.6, 6];
 const ERASER = { color: BOARD, width: 20 };
 
 function Sketch({ state, onChange }: WidgetProps<SketchState>) {
+  const t = useT();
   const erasing = state.ink === BOARD;
   const width = erasing ? ERASER.width : state.size;
   return (
@@ -22,16 +24,16 @@ function Sketch({ state, onChange }: WidgetProps<SketchState>) {
       />
       <div className="sketch-tools">
         {CHALKS.map((c) => (
-          <button key={c} className={`dot${c === state.ink ? ' on' : ''}`} style={{ background: c }} aria-label={`Gesso ${c}`} onClick={() => onChange({ ...state, ink: c })} />
+          <button key={c} className={`dot${c === state.ink ? ' on' : ''}`} style={{ background: c }} aria-label={t('Chalk {c}', { c })} onClick={() => onChange({ ...state, ink: c })} />
         ))}
-        <button className={`chip${erasing ? ' on' : ''}`} onClick={() => onChange({ ...state, ink: BOARD })}>Gomma</button>
+        <button className={`chip${erasing ? ' on' : ''}`} onClick={() => onChange({ ...state, ink: BOARD })}>{t('Eraser')}</button>
         {SIZES.map((s) => (
           <button key={s} className={`chip${state.size === s && !erasing ? ' on' : ''}`} onClick={() => onChange({ ...state, size: s, ink: erasing ? CHALKS[0]! : state.ink })}>
-            {s < 4 ? 'Fine' : 'Spesso'}
+            {s < 4 ? t('Thin') : t('Thick')}
           </button>
         ))}
-        <button className="chip" disabled={state.strokes.length === 0} aria-label="Annulla" onClick={() => onChange({ ...state, strokes: state.strokes.slice(0, -1) })}>↶</button>
-        <button className="chip" disabled={state.strokes.length === 0} aria-label="Pulisci" onClick={() => onChange({ ...state, strokes: [] })}>🗑</button>
+        <button className="chip" disabled={state.strokes.length === 0} aria-label={t('Undo')} onClick={() => onChange({ ...state, strokes: state.strokes.slice(0, -1) })}>↶</button>
+        <button className="chip" disabled={state.strokes.length === 0} aria-label={t('Clear')} onClick={() => onChange({ ...state, strokes: [] })}>🗑</button>
       </div>
     </div>
   );
@@ -39,7 +41,7 @@ function Sketch({ state, onChange }: WidgetProps<SketchState>) {
 
 registerWidget({
   type: 'sketch',
-  label: 'Lavagna',
+  label: 'Blackboard',
   icon: '🖍️',
   category: 'notes',
   defaultSize: { w: 380, h: 290 },

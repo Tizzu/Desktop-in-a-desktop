@@ -22,12 +22,12 @@ function compute(a: number, b: number, op: Op): number {
   }
 }
 
-const fmt = (n: number) => (Number.isFinite(n) ? String(parseFloat(n.toPrecision(12))) : 'Errore');
+const fmt = (n: number) => (Number.isFinite(n) ? String(parseFloat(n.toPrecision(12))) : 'Error');
 
 /** Applica un tasto allo stato. Nessun eval: solo le quattro operazioni. */
 export function press(state: CalcState, key: string): CalcState {
   let s = state;
-  if (s.display === 'Errore') {
+  if (s.display === 'Error') {
     if (key === 'C') return initialCalc();
     s = initialCalc();
   }

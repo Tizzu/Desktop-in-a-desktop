@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { normalizeUrl } from './links';
 import { registerWidget, type WidgetProps } from './registry';
+import { useT } from '../core/i18n';
 
 interface Link { id: string; title: string; url: string }
 interface LinksState { links: Link[] }
 
 function QuickLinks({ state, onChange }: WidgetProps<LinksState>) {
+  const t = useT();
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [bad, setBad] = useState(false);
@@ -28,20 +30,20 @@ function QuickLinks({ state, onChange }: WidgetProps<LinksState>) {
               <span className="link-letter">{l.title.charAt(0).toUpperCase()}</span>
               {l.title}
             </a>
-            <button className="icon-btn" aria-label={`Rimuovi ${l.title}`} onClick={() => onChange({ links: state.links.filter((x) => x.id !== l.id) })}>×</button>
+            <button className="icon-btn" aria-label={t('Remove {city}', { city: l.title })} onClick={() => onChange({ links: state.links.filter((x) => x.id !== l.id) })}>×</button>
           </li>
         ))}
       </ul>
       <div className="links-add">
-        <input value={title} placeholder="Nome (facoltativo)" onChange={(e) => setTitle(e.target.value)} />
+        <input value={title} placeholder={t('Name (optional)')} onChange={(e) => setTitle(e.target.value)} />
         <input
           value={url}
           className={bad ? 'bad' : ''}
-          placeholder="indirizzo.it"
+          placeholder={t('example.com')}
           onChange={(e) => { setUrl(e.target.value); setBad(false); }}
           onKeyDown={(e) => e.key === 'Enter' && add()}
         />
-        <button className="chip" onClick={add}>Aggiungi</button>
+        <button className="chip" onClick={add}>{t('Add')}</button>
       </div>
     </div>
   );
@@ -49,7 +51,7 @@ function QuickLinks({ state, onChange }: WidgetProps<LinksState>) {
 
 registerWidget({
   type: 'links',
-  label: 'Link rapidi',
+  label: 'Quick links',
   icon: '🔗',
   category: 'media',
   defaultSize: { w: 260, h: 280 },

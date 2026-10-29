@@ -31,7 +31,7 @@ export function reducer(s: AppData, a: Action): AppData {
       return {
         ...s,
         activeWorkspaceId: a.activate === false ? s.activeWorkspaceId : id,
-        workspaces: [...s.workspaces, { id, name: a.name ?? `Spazio ${order + 1}`, order, widgets: [] }],
+        workspaces: [...s.workspaces, { id, name: a.name ?? `Space ${order + 1}`, order, widgets: [] }],
       };
     }
     case 'renameWorkspace':

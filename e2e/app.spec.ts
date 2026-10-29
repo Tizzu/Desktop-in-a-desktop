@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 test('trascinare un tool dal cassetto crea il widget dove lo lasci', async ({ page }) => {
   const canvas = (await page.locator('.canvas').boundingBox())!;
-  await dragToolTo(page, 'Post-it', 500, 300);
+  await dragToolTo(page, 'Sticky note', 500, 300);
 
   await expect(widgets(page)).toHaveCount(1);
   const p = await position(widgets(page).first());
@@ -16,7 +16,7 @@ test('trascinare un tool dal cassetto crea il widget dove lo lasci', async ({ pa
 });
 
 test('posizione e contenuto si ritrovano alla riapertura', async ({ page }) => {
-  await dragToolTo(page, 'Post-it', 400, 250);
+  await dragToolTo(page, 'Sticky note', 400, 250);
   const w = widgets(page).first();
   await w.locator('textarea').fill('comprare il pane');
   await dragWidget(page, w, 150, 80);
@@ -33,7 +33,7 @@ test('posizione e contenuto si ritrovano alla riapertura', async ({ page }) => {
 });
 
 test('ricaricando subito dopo una modifica non si perde nulla', async ({ page }) => {
-  await dragToolTo(page, 'Post-it', 400, 250);
+  await dragToolTo(page, 'Sticky note', 400, 250);
   await widgets(page).first().locator('textarea').fill('scritto un attimo prima');
   await page.reload(); // senza attendere il debounce
 
@@ -42,17 +42,17 @@ test('ricaricando subito dopo una modifica non si perde nulla', async ({ page })
 });
 
 test('ogni spazio tiene i suoi widget', async ({ page }) => {
-  await dragToolTo(page, 'Post-it', 400, 250);
-  await page.getByRole('button', { name: 'Nuovo spazio' }).click();
+  await dragToolTo(page, 'Sticky note', 400, 250);
+  await page.getByRole('button', { name: 'New space' }).click();
   await expect(widgets(page)).toHaveCount(0);
 
-  await dragToolTo(page, 'Taccuino', 500, 300);
+  await dragToolTo(page, 'Notebook', 500, 300);
   await expect(widgets(page)).toHaveCount(1);
-  await expect(widgets(page).first().locator('.widget-bar')).toContainText('Taccuino');
+  await expect(widgets(page).first().locator('.widget-bar')).toContainText('Notebook');
 
-  await page.getByRole('button', { name: 'Spazio 1', exact: true }).click();
+  await page.getByRole('button', { name: 'Space 1', exact: true }).click();
   await expect(widgets(page)).toHaveCount(1);
-  await expect(widgets(page).first().locator('.widget-bar')).toContainText('Post-it');
+  await expect(widgets(page).first().locator('.widget-bar')).toContainText('Sticky note');
 });
 
 test('la pagina non scorre; la tela solo se restano widget fuori vista', async ({ page }) => {
@@ -66,7 +66,7 @@ test('la pagina non scorre; la tela solo se restano widget fuori vista', async (
   await expect.poll(async () => (await overflow()).canvas).toBe(0); // niente widget: niente scorrimento
 
   await page.setViewportSize({ width: 1100, height: 700 });
-  await dragToolTo(page, 'Post-it', 950, 300);
+  await dragToolTo(page, 'Sticky note', 950, 300);
   await expect(widgets(page)).toHaveCount(1);
 
   await page.setViewportSize({ width: 600, height: 700 });
@@ -78,7 +78,7 @@ test('la pagina non scorre; la tela solo se restano widget fuori vista', async (
 });
 
 test('un widget lanciato continua a muoversi e resta dentro i bordi', async ({ page }) => {
-  await dragToolTo(page, 'Post-it', 300, 300);
+  await dragToolTo(page, 'Sticky note', 300, 300);
   const w = widgets(page).first();
   const canvas = (await page.locator('.canvas').boundingBox())!;
   const start = await position(w);
@@ -94,19 +94,19 @@ test('un widget lanciato continua a muoversi e resta dentro i bordi', async ({ p
 });
 
 test('barra di ricerca fissa: coperta diventa trasparente e "\\" la porta davanti', async ({ page }) => {
-  await page.getByRole('button', { name: 'Impostazioni' }).click();
-  await page.getByLabel('Barra di ricerca al centro').check();
-  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByLabel('Search bar in the centre').check();
+  await page.getByRole('button', { name: 'Settings' }).click();
 
   const bar = page.locator('.fixed-search');
   await expect(bar).toBeVisible();
   await expect(bar).not.toHaveClass(/covered/);
 
   const box = (await bar.boundingBox())!;
-  await dragToolTo(page, 'Post-it', box.x + box.width / 2, box.y + box.height / 2);
+  await dragToolTo(page, 'Sticky note', box.x + box.width / 2, box.y + box.height / 2);
   await expect(widgets(page)).toHaveCount(1);
   await expect(bar).toHaveClass(/covered/);
-  await expect(bar.locator('input')).toHaveAttribute('placeholder', 'Sposta i widget o premi \\ per cercare');
+  await expect(bar.locator('input')).toHaveAttribute('placeholder', 'Move the widgets or press \\ to search');
 
   await page.keyboard.press('Backslash');
   await expect(bar.locator('input')).toBeFocused();

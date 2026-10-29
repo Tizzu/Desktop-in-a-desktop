@@ -3,6 +3,7 @@ import { maxCoord, tiltExtent } from '../core/physics';
 import type { CategoryId, WidgetInstance } from '../core/types';
 import { CATEGORIES, listWidgets, type WidgetDef } from '../widgets/registry';
 import { WidgetPreview } from './WidgetPreview';
+import { useT } from '../core/i18n';
 
 const SLOT_W = 132;
 const SLOT_H = 92;
@@ -13,7 +14,7 @@ const TUCK_LEN = 120;
 const TUCK_THICK = 84;
 const PEEK = 52; // quanto sporge sotto la barra
 
-const TABS: { id: CategoryId | 'all'; label: string; icon: string }[] = [{ id: 'all', label: 'Tutti', icon: '✨' }, ...CATEGORIES];
+const TABS: { id: CategoryId | 'all'; label: string; icon: string }[] = [{ id: 'all', label: 'All', icon: '✨' }, ...CATEGORIES];
 
 interface Props {
   style: 'tucked' | 'slanted';
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory, widgets }: Props) {
+  const t = useT();
   const trackRef = useRef<HTMLDivElement>(null);
   const [retracted, setRetracted] = useState('');
   const [ghost, setGhost] = useState<{ def: WidgetDef; x: number; y: number } | null>(null);
@@ -71,7 +73,7 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
       const top = r.top + BAR_H, bottom = top + PEEK + 14; // +14: lo scatto verso il basso al passaggio del mouse
       return boxes.some((b) => b.left < r.right && b.right > r.left && b.top < bottom && b.bottom > top);
     });
-    setRetracted(hits.map((h) => h.getAttribute('aria-label')).join('|'));
+    setRetracted(hits.map((h) => h.dataset.type).join('|'));
   }, [canvasRef, style]);
 
   useLayoutEffect(measure, [measure, widgets, category, grouped]);
@@ -95,7 +97,7 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
     <div
       className={`drawer drawer--${style}`}
       role="toolbar"
-      aria-label="Cassetti"
+      aria-label={t('Drawers')}
       // Se i tool non entrano, la rotella scorre il blocco in orizzontale.
       onWheel={(e) => {
         const t = trackRef.current;
@@ -106,19 +108,19 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
       }}
     >
       {grouped && (
-        <div className="drawer-cats" role="tablist" aria-label="Categorie">
+        <div className="drawer-cats" role="tablist" aria-label={t('Categories')}>
           {TABS.map((c) => (
-            <button key={c.id} role="tab" aria-selected={c.id === category} aria-label={c.label} title={c.label} className={`cat${c.id === category ? ' on' : ''}`} onClick={() => onCategory(c.id)}>
+            <button key={c.id} role="tab" aria-selected={c.id === category} aria-label={t(c.label)} title={t(c.label)} className={`cat${c.id === category ? ' on' : ''}`} onClick={() => onCategory(c.id)}>
               {c.icon}
             </button>
           ))}
-          <span className="cat-name">{TABS.find((c) => c.id === category)?.label}</span>
+          <span className="cat-name">{t(TABS.find((c) => c.id === category)?.label ?? 'All')}</span>
         </div>
       )}
       <div className="drawer-track" ref={trackRef}>
       {tools.map((def) => {
         const { w, h } = def.defaultSize;
-        const common = { key: def.type, 'aria-label': def.label, title: def.label, onPointerDown: (e: PointerEvent) => start(e, def) };
+        const common = { key: def.type, 'data-type': def.type, 'aria-label': t(def.label), title: t(def.label), onPointerDown: (e: PointerEvent) => start(e, def) };
         if (style === 'slanted') {
           return (
             <button {...common} className="drawer-item">
@@ -128,7 +130,7 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
         }
         const sc = Math.min(TUCK_LEN / w, TUCK_THICK / h);
         return (
-          <button {...common} className={`drawer-item${retractedSet.has(def.label) ? ' retracted' : ''}`} style={{ width: h * sc, height: BAR_H }}>
+          <button {...common} className={`drawer-item${retractedSet.has(def.type) ? ' retracted' : ''}`} style={{ width: h * sc, height: BAR_H }}>
             <span className="tool" style={{ width: h * sc, height: w * sc, top: BAR_H + PEEK - w * sc }}>
               <span className="tool-rot">
                 <WidgetPreview def={def} scale={sc} />
