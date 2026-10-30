@@ -60,25 +60,44 @@ export function sanitize(raw: unknown): AppData | undefined {
       id: w.id,
       name: typeof w.name === 'string' ? w.name : `Space ${i + 1}`,
       order: isNum(w.order) ? w.order : i,
+      links: w.links,
       widgets: (Array.isArray(w.widgets) ? w.widgets : [])
         .filter((x) => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.type === 'string' && isNum(x.x) && isNum(x.y) && isNum(x.w) && isNum(x.h))
         .map((x) => ({ ...x, z: isNum(x.z) ? x.z : 1 })),
     }));
   if (workspaces.length === 0) return undefined;
   const activeWorkspaceId = workspaces.some((w) => w.id === d.activeWorkspaceId) ? d.activeWorkspaceId! : workspaces[0]!.id;
-  return migrate({ ...(d as AppData), workspaces, activeWorkspaceId });
+  return migrate({ ...(d as AppData), workspaces, activeWorkspaceId }, viewCenter());
 }
 
-// Punto unico per le migrazioni di schema (v1 -> v2: settings e rotazione).
-export function migrate(data: AppData): AppData {
+/** Centro approssimato della tela (finestra meno barra dei cassetti e barra degli spazi), per migrare dalle coordinate assolute. */
+const viewCenter = () => (typeof window === 'undefined' ? undefined : { x: window.innerWidth / 2, y: (window.innerHeight - 92) / 2 });
+
+// Punto unico per le migrazioni di schema (v1 -> v2: settings e rotazione; v2 -> v3: coordinate rispetto al centro,
+// per cui serve `center`, il centro della tela di quel momento; senza, le posizioni restano com'erano).
+export function migrate(data: AppData, center?: { x: number; y: number }): AppData {
+  const absolute = data.version < 3 && center;
   return {
     ...data,
     version: SCHEMA_VERSION,
     settings: migrateSettings((data as { settings?: unknown }).settings),
-    workspaces: data.workspaces.map((w) => ({
-      ...w,
-      widgets: w.widgets.map((x) => ({ ...x, rot: x.rot ?? 0 })),
-    })),
+    workspaces: data.workspaces.map((w) => {
+      const ids = new Set(w.widgets.map((x) => x.id));
+      const hosts = new Set(w.widgets.filter((x) => typeof x.parent !== 'string').map((x) => x.id));
+      const links = (Array.isArray(w.links) ? w.links : []).filter(
+        (l): l is [string, string] => Array.isArray(l) && l.length === 2 && l[0] !== l[1] && ids.has(l[0]) && ids.has(l[1]),
+      );
+      return {
+        ...w,
+        links,
+        widgets: w.widgets.map((x) => {
+          // Un parent che non esiste (o che non è sulla tela) non ha senso: il widget torna libero.
+          const parent = typeof x.parent === 'string' && hosts.has(x.parent) && x.parent !== x.id ? x.parent : undefined;
+          const shifted = absolute && !parent ? { x: x.x - center.x, y: x.y - center.y } : {};
+          return { ...x, ...shifted, parent, rot: x.rot ?? 0 };
+        }),
+      };
+    }),
   };
 }
 
@@ -88,7 +107,7 @@ export function createDefaultData(): AppData {
     version: SCHEMA_VERSION,
     activeWorkspaceId: id,
     settings: { ...DEFAULT_SETTINGS },
-    workspaces: [{ id, name: 'Space 1', order: 0, widgets: [] }],
+    workspaces: [{ id, name: 'Space 1', order: 0, widgets: [], links: [] }],
   };
 }
 

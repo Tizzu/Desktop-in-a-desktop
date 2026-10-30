@@ -1,10 +1,17 @@
 import type { Lang } from './i18n';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
+
+/** Due widget agganciati per un lato: si muovono insieme. */
+export type Link = [string, string];
 
 export interface WidgetInstance {
   id: string;
   type: string;
+  /**
+   * Widget sulla tela: distanza del suo angolo in alto a sinistra dal centro della tela (il punto 0).
+   * Widget dentro un contenitore (`parent`): posizione rispetto all'angolo in alto a sinistra del suo corpo.
+   */
   x: number;
   y: number;
   w: number;
@@ -12,6 +19,8 @@ export interface WidgetInstance {
   z: number;
   /** Inclinazione in gradi, applicata solo se `settings.tilt` è attivo. */
   rot: number;
+  /** Id del widget contenitore che lo ospita; assente se sta direttamente sulla tela. */
+  parent?: string;
   state: unknown;
 }
 
@@ -20,6 +29,8 @@ export interface Workspace {
   name: string;
   order: number;
   widgets: WidgetInstance[];
+  /** Agganci tra widget della tela (non tra quelli dentro un contenitore). */
+  links?: Link[];
 }
 
 export const CATEGORY_IDS = ['notes', 'time', 'numbers', 'wellbeing', 'media', 'fun'] as const;

@@ -10,7 +10,10 @@ export function prepare(a: Action, s: AppData): Action {
     }
     case 'addWidget':
     case 'updateWidget':
+    case 'updateWidgets':
     case 'removeWidget':
+    case 'link':
+    case 'unlink':
     case 'bringToFront':
       return { ...a, ws: a.ws ?? s.activeWorkspaceId };
     default:

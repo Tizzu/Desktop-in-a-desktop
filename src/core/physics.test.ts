@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bounceOff, intersects, maxCoord, tiltExtent } from './physics';
+import { bounceOff, intersects, fitCoord, tiltExtent } from './physics';
 
 const bar = { x: 100, y: 100, w: 400, h: 50 };
 
@@ -29,17 +29,13 @@ describe('urto contro la barra', () => {
   });
 });
 
-describe('limiti di posizione e scorrimento', () => {
-  it('limita al bordo visibile, considerando lo scorrimento', () => {
-    expect(maxCoord(0, 800, 200, 0)).toBe(600);
-    expect(maxCoord(300, 800, 200, 0)).toBe(900);
-  });
-  it('un widget già fuori vista resta dov\'è, senza essere riportato dentro', () => {
-    expect(maxCoord(0, 500, 200, 900)).toBe(900);
+describe('limiti di posizione', () => {
+  it('limita al bordo visibile', () => {
+    expect(fitCoord(800, 200)).toBe(600);
   });
   it('non va mai sotto zero e rispetta il margine di rotazione', () => {
-    expect(maxCoord(0, 100, 300, 0)).toBe(0);
-    expect(maxCoord(0, 800, 200, 0, 10)).toBe(590);
+    expect(fitCoord(100, 300)).toBe(0);
+    expect(fitCoord(800, 200, 10)).toBe(590);
   });
   it('la rotazione fa sporgere il riquadro; a 0° no', () => {
     expect(tiltExtent(300, 300, 0)).toEqual({ x: 0, y: 0 });

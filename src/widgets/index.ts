@@ -47,4 +47,5 @@ import './rain';
 import './fireplace';
 import './label';
 import './frame';
+import './container';
 export { getWidget, listWidgets } from './registry';

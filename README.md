@@ -6,14 +6,21 @@ Everything stays **on your computer**: no account, no cloud, no network access, 
 
 ## What's inside
 
-49 widgets in six categories:
+50 widgets in six categories:
 
 - **Notes** – sticky note (with drawing), notebook (markdown), to-do, blackboard, goal of the day, journal, flashcards, board
 - **Time** – clock, timer, Pomodoro, stopwatch, calendar, world clock, countdown, reminders with notifications, intervals, agenda
 - **Numbers** – calculator, converter, counter, expenses, piggy bank, split the bill, progress, water
 - **Wellbeing** – habits, breathing, eye break, mood, gratitude, sleep, day streak, plant
-- **Links & images** – quick links, search, image, palette, label, frame
+- **Links & images** – quick links, search, image, palette, label, frame, container
 - **Fun** – dice, bubbles, sounds, 2048, memory, tic-tac-toe, wheel of fortune, rain, fireplace
+
+Quality-of-life touches:
+
+- **Sticky widgets** – bring one widget's edge close to another's and they snap together; from then on they move as one (grab any title bar). Hover the join to reveal a broken-chain button that detaches them. Hold <kbd>Alt</kbd> while dragging to avoid snapping.
+- **Container** – a widget that holds other widgets: drop them on it (or drag a tool from the drawer onto it), move the container and they follow, drag them out whenever you like. The ▾ in its bar closes it to a single bar, hiding what's inside; ▸ opens it again exactly as it was. Removing a container puts its widgets back on the desk.
+- **Resizing the window** – positions are measured from the centre of the page (where the optional search bar sits), so widgets keep their place relative to it. If the window gets too small, widgets are pushed back into view instead of making the page scroll, and return where they were when it grows again.
+- **Backup** – Settings → *Export data* saves everything (all spaces, widgets and settings) to a `.json` file; *Import data* restores it, replacing the current data. *Copy as text* / *Paste from text* do the same through a single line of text you can paste into a chat or an email, no file needed. Handy when moving between computers.
 
 There also a multitude of options for making it more aligned with your idea of a personal workspace.
 
@@ -21,7 +28,7 @@ There also a multitude of options for making it more aligned with your idea of a
 
 The extension only asks for: `storage` (to save your data), `alarms` and `notifications` (timers and reminders while the tab is closed), and `search` (the search bar uses your browser's default search engine). It never reads or changes any website. Data lives in IndexedDB, inside your browser profile.
 
-> Data is not synced between computers and there is no sync feature: uninstalling the extension or clearing the browser's data deletes it.
+> Data is not synced between computers and there is no sync feature (use Export/Import to move it): uninstalling the extension or clearing the browser's data deletes it.
 
 ## Install (from source)
 

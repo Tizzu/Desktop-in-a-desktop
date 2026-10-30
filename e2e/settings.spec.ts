@@ -94,7 +94,7 @@ test('un salvataggio del vecchio formato (v1) si apre e viene aggiornato', async
   await settled(widgets(page).first());
   await page.waitForTimeout(600);
   const saved = await readSaved(page);
-  expect(saved.version).toBe(2);
+  expect(saved.version).toBe(3);
   expect(saved.settings).toMatchObject({ tilt: true, physics: true, theme: 'warm', categories: true });
   expect(saved.workspaces[0].widgets[0]).toMatchObject({ rot: 0, state: { text: 'dal passato' } });
 });
@@ -130,4 +130,57 @@ test('impostazioni: il pannello mostra i crediti e il pulsante è ben grande', a
   await button.click();
   await expect(page.locator('.credits')).toContainText('Valentino Artizzu');
   await expect(page.locator('.credits a')).toHaveAttribute('href', /github\.com\/Tizzu\/Desktop-in-a-desktop/);
+});
+
+test('esporta e importa: i dati si ritrovano dopo una sostituzione', async ({ page }) => {
+  await dragToolTo(page, 'Sticky note', 400, 250);
+  await widgets(page).first().locator('textarea').fill('da salvare');
+  await openSettings(page);
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export to file' }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^desktop-in-a-desktop-\d{4}-\d{2}-\d{2}\.json$/);
+  const file = await download.path();
+
+  await widgets(page).first().getByRole('button', { name: 'Remove widget' }).click();
+  await expect(widgets(page)).toHaveCount(0);
+
+  page.once('dialog', (d) => void d.accept());
+  await page.getByLabel('Backup file').setInputFiles(file);
+  await expect(widgets(page)).toHaveCount(1);
+  await expect(widgets(page).first().locator('textarea')).toHaveValue('da salvare');
+
+  // Un file sbagliato viene rifiutato senza toccare niente.
+  let message = '';
+  page.once('dialog', (d) => { message = d.message(); void d.accept(); });
+  await page.getByLabel('Backup file').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"no":1}') });
+  await expect.poll(() => message).toContain('not a valid backup');
+  await expect(widgets(page)).toHaveCount(1);
+});
+
+test('esporta come testo: si copia una stringa e la si incolla per ripristinare', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await dragToolTo(page, 'Sticky note', 400, 250);
+  await widgets(page).first().locator('textarea').fill('via chat');
+  await openSettings(page);
+  await page.getByRole('button', { name: 'Copy as text' }).click();
+  await expect(page.getByRole('status')).toContainText('Copied');
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  expect(text).toMatch(/^DIAD1:[A-Za-z0-9_-]+:END$/);
+
+  await widgets(page).first().getByRole('button', { name: 'Remove widget' }).click();
+  await expect(widgets(page)).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Paste from text' }).click();
+  // Una chat può spezzare la riga e aggiungere parole intorno: si ritrova lo stesso.
+  await page.getByLabel('Backup text').fill(`Ecco il mio desk!\n${text.slice(0, 40)}\n${text.slice(40)}\nciao`);
+  page.once('dialog', (d) => void d.accept());
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(widgets(page)).toHaveCount(1);
+  await expect(widgets(page).first().locator('textarea')).toHaveValue('via chat');
+
+  await expect(page.getByLabel('Backup text')).toHaveCount(0); // dopo l'importazione l'area si chiude
+  await page.getByRole('button', { name: 'Paste from text' }).click();
+  page.once('dialog', (d) => void d.accept());
+  await page.getByLabel('Backup text').fill('DIAD1:nonvalido:END');
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(widgets(page)).toHaveCount(1);
 });

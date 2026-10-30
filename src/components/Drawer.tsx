@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type RefObject } from 'react';
-import { maxCoord, tiltExtent } from '../core/physics';
+import { fitCoord, tiltExtent } from '../core/physics';
+import { BAR_H as TITLE_H } from '../core/layout';
 import type { CategoryId, WidgetInstance } from '../core/types';
 import { CATEGORIES, listWidgets, type WidgetDef } from '../widgets/registry';
 import { WidgetPreview } from './WidgetPreview';
@@ -23,7 +24,8 @@ interface Props {
   category: CategoryId | 'all';
   onCategory: (c: CategoryId | 'all') => void;
   canvasRef: RefObject<HTMLDivElement | null>;
-  onDrop: (def: WidgetDef, x: number, y: number) => void;
+  /** (x, y) rispetto al centro della tela; se cade su un contenitore, `host` lo indica e (x, y) sono relative al suo corpo. */
+  onDrop: (def: WidgetDef, x: number, y: number, host?: string) => void;
   /** Widget dello spazio attivo: i tool che pendono sopra di loro si ritraggono. */
   widgets: WidgetInstance[];
 }
@@ -48,12 +50,29 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
         ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
       if (inside) {
         const { w, h } = def.defaultSize;
+        // Su un contenitore (il più in alto) il widget entra al suo interno.
+        const hit = [...canvas.querySelectorAll<HTMLElement>('.widget[data-container]')]
+          .filter((c) => {
+            const r = c.getBoundingClientRect();
+            return ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top + TITLE_H && ev.clientY <= r.bottom;
+          })
+          .sort((a, b) => Number(b.style.zIndex) - Number(a.style.zIndex))[0];
+        if (hit) {
+          const r = hit.getBoundingClientRect();
+          onDrop(
+            def,
+            Math.min(Math.max(0, r.width - w), Math.max(0, ev.clientX - r.left - w / 2)),
+            Math.min(Math.max(0, r.height - TITLE_H - h), Math.max(0, ev.clientY - r.top - TITLE_H - 16)),
+            hit.dataset.id,
+          );
+          return;
+        }
         const ext = tiltExtent(w, h, 3); // margine per la rotazione casuale massima (±3°)
-        // Coordinate della tela (che può essere scrollata), dentro l'area visibile.
+        // Dentro l'area visibile, poi rispetto al centro della tela.
         onDrop(
           def,
-          Math.min(maxCoord(canvas.scrollLeft, canvas.clientWidth, w, 0, ext.x), Math.max(0, ev.clientX - rect.left + canvas.scrollLeft - w / 2)),
-          Math.min(maxCoord(canvas.scrollTop, canvas.clientHeight, h, 0, ext.y), Math.max(0, ev.clientY - rect.top + canvas.scrollTop - 16)),
+          Math.min(fitCoord(canvas.clientWidth, w, ext.x), Math.max(0, ev.clientX - rect.left - w / 2)) - canvas.clientWidth / 2,
+          Math.min(fitCoord(canvas.clientHeight, h, ext.y), Math.max(0, ev.clientY - rect.top - 16)) - canvas.clientHeight / 2,
         );
       }
     };
@@ -83,7 +102,11 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
     canvas?.addEventListener('scroll', measure, { passive: true });
     window.addEventListener('resize', measure);
     measure(); // la tela è un fratello renderizzato dopo: al primo layout il suo ref non c'è ancora
+    // I widget si dispongono dopo aver misurato la tela (e si adattano alla finestra): si rimisura a ogni loro spostamento.
+    const mo = canvas ? new MutationObserver(measure) : undefined;
+    mo?.observe(canvas!, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] });
     return () => {
+      mo?.disconnect();
       track?.removeEventListener('scroll', measure);
       canvas?.removeEventListener('scroll', measure);
       window.removeEventListener('resize', measure);

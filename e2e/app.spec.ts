@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { dragToolTo, dragWidget, openApp, position, settled, widgets } from './helpers';
 
 test.beforeEach(async ({ page }) => {
@@ -55,26 +55,33 @@ test('ogni spazio tiene i suoi widget', async ({ page }) => {
   await expect(widgets(page).first().locator('.widget-bar')).toContainText('Sticky note');
 });
 
-test('la pagina non scorre; la tela solo se restano widget fuori vista', async ({ page }) => {
+test('la finestra si ridimensiona senza scorrere: i widget restano fissi rispetto al centro, o vengono spinti dentro', async ({ page }) => {
   const overflow = () =>
     page.evaluate(() => {
       const c = document.querySelector('.canvas')!;
       return { canvas: c.scrollWidth - c.clientWidth, page: document.documentElement.scrollWidth - innerWidth };
     });
-
-  await page.setViewportSize({ width: 600, height: 700 });
-  await expect.poll(async () => (await overflow()).canvas).toBe(0); // niente widget: niente scorrimento
-
-  await page.setViewportSize({ width: 1100, height: 700 });
-  await dragToolTo(page, 'Sticky note', 950, 300);
-  await expect(widgets(page)).toHaveCount(1);
-
-  await page.setViewportSize({ width: 600, height: 700 });
-  await expect.poll(async () => (await overflow()).canvas).toBeGreaterThan(0); // widget rimasto fuori
-  expect((await overflow()).page).toBe(0); // la pagina intera non scorre mai
+  const fromCentre = async (w: Locator) => {
+    const c = (await page.locator('.canvas').boundingBox())!;
+    const b = (await w.boundingBox())!;
+    return Math.round(b.x - c.x - c.width / 2);
+  };
 
   await page.setViewportSize({ width: 1100, height: 700 });
-  await expect.poll(async () => (await overflow()).canvas).toBe(0); // di nuovo tutto in vista
+  await dragToolTo(page, 'Sticky note', 700, 300);
+  const w = widgets(page).first();
+  await expect(w).toBeVisible();
+  const d0 = await fromCentre(w);
+
+  await page.setViewportSize({ width: 1300, height: 700 });
+  await expect.poll(() => fromCentre(w)).toBe(d0); // la finestra si allarga: stessa distanza dal centro
+
+  await page.setViewportSize({ width: 600, height: 700 });
+  await expect.poll(async () => (await w.boundingBox())!.x + (await w.boundingBox())!.width).toBeLessThanOrEqual(600 + 12); // spinto dentro
+  expect(await overflow()).toEqual({ canvas: 0, page: 0 }); // niente scorrimento da nessuna parte
+
+  await page.setViewportSize({ width: 1100, height: 700 });
+  await expect.poll(() => fromCentre(w)).toBe(d0); // allargando torna dov'era
 });
 
 test('un widget lanciato continua a muoversi e resta dentro i bordi', async ({ page }) => {

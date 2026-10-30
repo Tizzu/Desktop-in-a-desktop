@@ -11,6 +11,8 @@ export interface WidgetDef<S = any> {
   label: string;
   icon: string;
   category: CategoryId;
+  /** Vero se altri widget possono essere messi al suo interno (vedi `container.tsx`). */
+  container?: boolean;
   defaultSize: { w: number; h: number };
   initialState: () => S;
   Component: ComponentType<WidgetProps<S>>;

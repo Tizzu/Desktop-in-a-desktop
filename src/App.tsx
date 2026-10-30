@@ -113,17 +113,17 @@ export function App() {
         grouped={data.settings.categories}
         category={data.settings.activeCategory}
         onCategory={(activeCategory) => dispatch({ type: 'setSettings', patch: { activeCategory } })}
-        onDrop={(def, x, y) =>
+        onDrop={(def, x, y, parent) =>
           dispatch({
             type: 'addWidget',
-            widget: { id: crypto.randomUUID(), type: def.type, x, y, ...def.defaultSize, rot: Math.random() * 6 - 3, state: def.initialState() },
+            widget: { id: crypto.randomUUID(), type: def.type, x, y, parent, ...def.defaultSize, rot: Math.random() * 6 - 3, state: def.initialState() },
           })
         }
       />
       <Canvas ref={canvasRef} workspace={active} settings={data.settings} dispatch={dispatch} />
       <div className="bottom-bar">
         <Tabs data={data} dispatch={dispatch} />
-        <SettingsMenu settings={data.settings} dispatch={dispatch} />
+        <SettingsMenu data={data} dispatch={dispatch} />
       </div>
     </div>
     </LangContext.Provider>

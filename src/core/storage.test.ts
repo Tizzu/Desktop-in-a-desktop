@@ -28,9 +28,26 @@ describe('storage', () => {
       workspaces: [{ id: 'a', name: 'x', order: 0, widgets: [{ id: 'w', type: 'postit', x: 1, y: 2, w: 3, h: 4, z: 1, state: {} }] }],
     };
     const m = migrate(v1);
-    expect(m.version).toBe(2);
+    expect(m.version).toBe(3);
     expect(m.settings).toEqual({ language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, theme: 'warm', activeCategory: 'all' });
     expect(m.workspaces[0]!.widgets[0]!.rot).toBe(0);
+  });
+
+  it('migra le coordinate assolute (v2) a coordinate rispetto al centro', () => {
+    const w = (id: string, parent?: string) => ({ id, type: 'postit', x: 600, y: 400, w: 10, h: 10, z: 1, rot: 0, parent, state: {} });
+    const v2: any = { version: 2, activeWorkspaceId: 'a', workspaces: [{ id: 'a', name: 'x', order: 0, widgets: [w('p'), w('c', 'p')] }] };
+    const m = migrate(v2, { x: 500, y: 300 });
+    expect(m.workspaces[0]!.widgets.map((x) => [x.x, x.y])).toEqual([[100, 100], [600, 400]]); // il figlio è già relativo
+    expect(migrate(m, { x: 500, y: 300 }).workspaces[0]!.widgets[0]!.x).toBe(100); // già v3: non si sposta di nuovo
+    expect(migrate(v2).workspaces[0]!.widgets[0]!.x).toBe(600); // senza centro resta com'è
+  });
+
+  it('scarta agganci e parent che non puntano a niente', () => {
+    const w = (id: string, parent?: string) => ({ id, type: 'postit', x: 0, y: 0, w: 10, h: 10, z: 1, rot: 0, parent, state: {} });
+    const d: any = { version: 3, activeWorkspaceId: 'a', workspaces: [{ id: 'a', name: 'x', order: 0, links: [['p', 'q'], ['p', 'zz'], ['p', 'p'], 'x'], widgets: [w('p'), w('q'), w('c', 'nope')] }] };
+    const m = migrate(d);
+    expect(m.workspaces[0]!.links).toEqual([['p', 'q']]);
+    expect(m.workspaces[0]!.widgets[2]!.parent).toBeUndefined();
   });
 
   it('migra il vecchio interruttore dei colori al tema "system"', () => {

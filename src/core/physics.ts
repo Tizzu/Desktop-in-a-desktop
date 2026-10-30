@@ -19,13 +19,8 @@ export function bounceOff(box: Rect, v: { vx: number; vy: number }, obstacle: Re
   return { x: box.x, y: box.y + dir * oy, vx: v.vx, vy: dir * Math.abs(v.vy) * restitution };
 }
 
-/**
- * Massima coordinata (x o y) raggiungibile da un widget: il bordo visibile della tela, tenendo conto dello
- * scorrimento. Se il widget è già più in là (finestra rimpicciolita) resta dov'è: così trascinare o lanciare
- * non allarga mai la pagina, che scorre solo per raggiungere widget rimasti fuori vista.
- */
-export const maxCoord = (scroll: number, view: number, size: number, start: number, margin = 0) =>
-  Math.max(0, start, scroll + view - size - margin);
+/** Massima coordinata (x o y) di un widget nella tela: il suo bordo opposto resta in vista, con il margine di rotazione. */
+export const fitCoord = (view: number, size: number, margin = 0) => Math.max(0, view - size - margin);
 
 /** Quanto la rotazione fa sporgere il riquadro del widget oltre il suo box, per lato (px). */
 export function tiltExtent(w: number, h: number, rotDeg: number) {
