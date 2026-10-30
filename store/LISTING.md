@@ -55,7 +55,8 @@ Trasforma la nuova scheda in una scrivania che disponi come vuoi. Trascina gli s
 
 ## Assets
 
-- Icon 128×128: already in the package (`public/icon/128.png`).
+- Store icon 128×128: `store/icon-128.png` (same as the package icon, `public/icon/128.png`).
+- Marquee promo tile 1400×560: `store/promo-marquee-1400x560.jpg`.
 - Screenshots 1280×800: `store/screenshots/`.
 - Small promo tile 440×280: `store/promo-small-440x280.jpg`.
 
