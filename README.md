@@ -30,6 +30,8 @@ The extension only asks for: `storage` (to save your data), `alarms` and `notifi
 
 > Data is not synced between computers and there is no sync feature (use Export/Import to move it): uninstalling the extension or clearing the browser's data deletes it.
 
+See the [privacy policy](PRIVACY.md). The extension collects and transmits no user data (Limited Use of the Chrome Web Store User Data Policy: nothing is sold, shared or used for advertising).
+
 ## Install (from source)
 
 Requires Node.js 20+.
@@ -41,7 +43,7 @@ npm run build        # produces .output/chrome-mv3
 
 Then open `chrome://extensions` (or `brave://extensions`), turn on “Developer mode”, choose “Load unpacked” and select `.output/chrome-mv3`.
 
-For development with auto-reload run `npm run dev`. To build a zip you can distribute run `npm run zip`.
+For development with auto-reload run `npm run dev`. To build a zip you can distribute run `npm run zip`. The package for the Chrome Web Store is `npm run zip:store` (same build without the fixed extension key, since the Store assigns the ID); see [store/LISTING.md](store/LISTING.md) for the listing text and permission justifications.
 
 ## Tests
 

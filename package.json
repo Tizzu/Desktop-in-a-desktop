@@ -1,7 +1,7 @@
 {
   "name": "desktop-in-a-desktop",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -10,7 +10,8 @@
     "test": "vitest run",
     "postinstall": "wxt prepare",
     "test:e2e": "wxt build && playwright test",
-    "zip": "wxt zip"
+    "zip": "wxt zip",
+    "zip:store": "STORE_BUILD=1 wxt zip"
   },
   "dependencies": {
     "idb": "^8.0.4",
