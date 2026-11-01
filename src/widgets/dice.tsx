@@ -33,7 +33,12 @@ function Dice({ state, onChange }: WidgetProps<DiceState>) {
       </div>
       <div className="dice-out" key={roll}>
         {state.results.length === 0 ? <span className="muted">{t('Roll!')}</span> : state.results.map((r, i) => (
-          <span key={i} className="die">{coin ? (r === 1 ? t('Heads') : t('Tails')) : r}</span>
+          coin ? (
+            <span key={i} className="coin-wrap">
+              <span className={`coin ${r === 1 ? 'heads' : 'tails'}`} role="img" aria-label={r === 1 ? t('Heads') : t('Tails')}>{r === 1 ? '♛' : '❖'}</span>
+              <span className="coin-name">{r === 1 ? t('Heads') : t('Tails')}</span>
+            </span>
+          ) : <span key={i} className="die">{r}</span>
         ))}
       </div>
       {!coin && state.results.length > 1 && <div className="muted">{t('Total {sum}', { sum })}</div>}

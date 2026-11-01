@@ -47,10 +47,12 @@ test.describe('widget aggiuntivi (2)', () => {
     await page.clock.install({ time: new Date(2026, 9, 28, 10, 0, 0) });
     await openApp(page);
     const w = await addWidget(page, 'Agenda');
-    await w.getByLabel('Hour 9').fill('dentist');
-    await expect(w.getByLabel('Hour 9')).toHaveValue('dentist');
+    await w.getByLabel('Time 09:30').fill('dentist');
+    await expect(w.getByLabel('Time 09:30')).toHaveValue('dentist');
+    await expect(w.getByLabel('Time 23:30')).toBeAttached(); // fino a fine giornata
+    await expect(w.getByLabel('Time 00:00')).toBeAttached();
     await page.clock.fastForward(15 * 3600_000); // runFor farebbe scattare ogni orologio dei cassetti per ore
-    await expect(w.getByLabel('Hour 9')).toHaveValue('');
+    await expect(w.getByLabel('Time 09:30')).toHaveValue('');
   });
 
   test('diario e gratitudine: si scrive per oggi e si sfoglia il giorno prima', async ({ page }) => {
@@ -96,7 +98,7 @@ test.describe('widget aggiuntivi (2)', () => {
     await expect(w.locator('.counter-value')).toContainText('0.00');
   });
 
-  test('sonno, serie di giorni, etichetta e cornice conservano lo stato', async ({ page }) => {
+  test('sonno, serie di giorni, etichetta conservano lo stato', async ({ page }) => {
     await fresh(page);
     const s = await addWidget(page, 'Sleep', 250, 250);
     await s.getByRole('button', { name: 'More' }).click();
@@ -107,14 +109,11 @@ test.describe('widget aggiuntivi (2)', () => {
     const l = await addWidget(page, 'Label', 950, 250);
     await l.getByLabel('Text').fill('Studio');
     await l.getByRole('button', { name: 'Larger' }).click({ force: true });
-    const f = await addWidget(page, 'Frame', 250, 520);
-    await f.getByRole('button', { name: 'Colour 3' }).click();
     await reload(page);
     await expect(page.locator('.canvas .sleep-now')).toHaveText('7.5 h');
     await expect(page.locator('.canvas').getByLabel('Name')).toHaveValue('caffè');
     await expect(page.locator('.canvas').getByLabel('Text')).toHaveValue('Studio');
     await expect(page.locator('.canvas').getByLabel('Text')).toHaveCSS('font-size', '38px');
-    await expect(page.locator('.canvas').getByRole('button', { name: 'Colour 3' })).toHaveClass(/on/);
   });
 
   test('pioggia e caminetto si mostrano senza errori', async ({ page }) => {

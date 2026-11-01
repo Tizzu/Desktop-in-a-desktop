@@ -14,14 +14,15 @@ Upload `.output/desktop-in-a-desktop-<version>-chrome.zip`, built with `npm run 
 
 Turn your new tab into a desk you arrange yourself.
 
-Drag tools from the drawer bar at the top and drop them anywhere: 50 widgets in six categories.
+Drag tools from the drawer bar at the top and drop them anywhere: 50 widgets in seven categories.
 
-• Notes – sticky notes (with drawing), markdown notebook, to-do, blackboard, goal of the day, journal, flashcards, board
-• Time – clock, timer, Pomodoro, stopwatch, calendar, world clock, countdown, reminders with notifications, agenda
+• Notes – sticky notes (with drawing), markdown notebook with formatting buttons, to-do, blackboard, goal of the day, journal, flashcards, board, snippets (one-click copy)
+• Time – clock, timer, focus timer, stopwatch, calendar, world clock, countdown (with a “time left” view of the day, week, month and year), reminders with notifications, agenda
 • Numbers – calculator, converter, counter, expenses, piggy bank, split the bill, water
 • Wellbeing – habits, breathing, eye break, mood, gratitude, sleep, plant
-• Links & images – quick links, search, image, palette, label, frame, container
-• Fun – dice, bubbles, 2048, memory, tic-tac-toe, wheel of fortune, rain, fireplace
+• Links & images – quick links, search, image, palette
+• Layout – label, container
+• Fun – dice and coin, bubbles, 2048, memory, tic-tac-toe, lucky wheel, rain, fireplace
 
 Make it yours
 • Several spaces, like tabs, each with its own set
@@ -35,7 +36,7 @@ Private by design: no account, no cloud, no analytics, no network access. Your d
 
 **Descrizione (italiano):**
 
-Trasforma la nuova scheda in una scrivania che disponi come vuoi. Trascina gli strumenti dalla barra in alto: 50 widget in sei categorie (note, tempo, numeri, benessere, link e immagini, svago). Più spazi come schede, widget che si agganciano e si muovono insieme, contenitori che si chiudono, temi, esportazione e importazione di tutto come file o testo da incollare. Nessun account, nessun cloud, nessuna analisi: i dati restano sul tuo computer. Software libero (MIT).
+Trasforma la nuova scheda in una scrivania che disponi come vuoi. Trascina gli strumenti dalla barra in alto: 49 widget in sei categorie (note, tempo, numeri, benessere, link e immagini, svago). Più spazi come schede, widget che si agganciano e si muovono insieme, contenitori che si chiudono, temi, esportazione e importazione di tutto come file o testo da incollare. Nessun account, nessun cloud, nessuna analisi: i dati restano sul tuo computer. Software libero (MIT).
 
 ## Privacy tab
 

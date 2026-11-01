@@ -1,8 +1,9 @@
-import { useRef, useState, type Dispatch } from 'react';
+import { useEffect, useRef, useState, type Dispatch } from 'react';
 import { browser } from 'wxt/browser';
 import { LANGUAGES, isLang, useT } from '../core/i18n';
 import type { Action } from '../core/store';
 import { THEMES } from '../core/themes';
+import { DEFAULT_SHORTCUT, eventToShortcut, shortcutLabel } from '../core/shortcut';
 import { exportFileName, exportJson, exportText, parseImport, parseImportText } from '../core/backup';
 import type { AppData } from '../core/types';
 
@@ -21,11 +22,28 @@ function version() {
 
 type Settings = AppData['settings'];
 
-export function SettingsMenu({ data, dispatch }: { data: AppData; dispatch: Dispatch<Action> }) {
+export function SettingsMenu({ data, dispatch, onTour }: { data: AppData; dispatch: Dispatch<Action>; onTour: () => void }) {
   const t = useT();
   const settings = data.settings;
   const [open, setOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [capturing, setCapturing] = useState(false); // in attesa del nuovo tasto per la ricerca
+
+  // Mentre si attende, il prossimo tasto diventa la scorciatoia: lo si intercetta prima di ogni altro ascoltatore.
+  useEffect(() => {
+    if (!capturing) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape') return setCapturing(false);
+      const key = e.key === 'Backspace' ? DEFAULT_SHORTCUT : eventToShortcut(e);
+      if (!key) return; // solo un modificatore: si aspetta il tasto vero
+      dispatch({ type: 'setSettings', patch: { searchKey: key } });
+      setCapturing(false);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [capturing, dispatch]);
   const [text, setText] = useState<string | null>(null); // area di testo aperta (per incollare, o per copiare a mano)
   const [note, setNote] = useState('');
 
@@ -89,6 +107,17 @@ export function SettingsMenu({ data, dispatch }: { data: AppData; dispatch: Disp
               {t(label)}
             </label>
           ))}
+          <div className="shortcut-row">
+            <span>{t('Search shortcut')}</span>
+            <button
+              className={`shortcut-btn${capturing ? ' on' : ''}`}
+              title={t('Click, then press the new shortcut (Esc cancels, Backspace restores the default)')}
+              onClick={() => setCapturing(!capturing)}
+              onBlur={() => setCapturing(false)}
+            >
+              {capturing ? t('Press a key…') : shortcutLabel(settings.searchKey)}
+            </button>
+          </div>
           <label>
             {t('Drawer style')}
             <select
@@ -131,6 +160,7 @@ export function SettingsMenu({ data, dispatch }: { data: AppData; dispatch: Disp
               <button className="backup-go" onClick={() => void importText()}>{t('Import')}</button>
             </>
           )}
+          <button className="backup-go tour-link" onClick={() => { setOpen(false); onTour(); }}>{t('Quick tour')}</button>
           <footer className="credits">
             <strong>Desktop in a Desktop</strong> {version() && `v${version()}`}
             <span>{t('Made by {name}', { name: 'Valentino Artizzu' })}</span>

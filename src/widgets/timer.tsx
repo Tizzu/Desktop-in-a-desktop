@@ -76,7 +76,7 @@ registerWidget({
   label: 'Timer',
   icon: '⏳',
   category: 'time',
-  defaultSize: { w: 230, h: 210 },
+  defaultSize: { w: 290, h: 220 },
   initialState: () => ({ duration: 5 * 60_000, endsAt: null, left: null }),
   Component: Timer,
 });

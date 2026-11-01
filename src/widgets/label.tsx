@@ -20,7 +20,7 @@ registerWidget({
   type: 'label',
   label: 'Label',
   icon: '🏷️',
-  category: 'media',
+  category: 'layout',
   defaultSize: { w: 300, h: 110 },
   initialState: () => ({ text: '', size: 32 }),
   Component: Label,

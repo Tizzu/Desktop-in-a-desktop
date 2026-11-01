@@ -54,7 +54,7 @@ registerWidget({
   label: 'Quick links',
   icon: '🔗',
   category: 'media',
-  defaultSize: { w: 260, h: 280 },
+  defaultSize: { w: 280, h: 280 },
   initialState: () => ({ links: [] }),
   Component: QuickLinks,
 });

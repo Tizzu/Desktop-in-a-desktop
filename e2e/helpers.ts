@@ -2,9 +2,22 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export const widgets = (page: Page) => page.locator('.canvas .widget');
 
+/** Chiude la visita guidata del primo avvio, se c'è: altrimenti copre la pagina. */
+export async function dismissTour(page: Page) {
+  const skip = page.getByRole('button', { name: 'Skip tour' });
+  if (await skip.isVisible()) {
+    await skip.click();
+    await expect(skip).toBeHidden();
+    // Saltarla è una modifica da salvare: se si aspetta il salvataggio, non sovrascrive i dati che il test scrive subito dopo.
+    // (se il database è bloccato apposta dal test, non c'è niente da attendere)
+    await expect.poll(async () => (await readSaved(page))?.settings?.tourDone, { timeout: 3000 }).toBe(true).catch(() => {});
+  }
+}
+
 export async function openApp(page: Page) {
   await page.goto('/newtab.html');
   await page.locator('.drawer-item').first().waitFor();
+  await dismissTour(page);
 }
 
 /** Trascina un tool dal cassetto fino al punto (x, y) della finestra e lo lascia lì. */
@@ -48,7 +61,7 @@ export async function settled(w: Locator) {
 
 // --- Dati di partenza scritti direttamente nel database, per provare casi che a mano sono scomodi ---
 
-export const DEFAULT_SETTINGS = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, theme: 'warm', activeCategory: 'all' };
+export const DEFAULT_SETTINGS = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, activeCategory: 'all' };
 
 export function appData(widgetList: unknown[], settings: Record<string, unknown> = {}) {
   return {
@@ -80,6 +93,7 @@ export async function seed(page: Page, data: unknown) {
   );
   await page.reload();
   await page.locator('.drawer-item').first().waitFor();
+  await dismissTour(page);
 }
 
 /** Legge cosa c'è salvato nel database. */

@@ -38,7 +38,7 @@ describe('traduzioni', () => {
 
   it('ogni testo dell’interfaccia ha la traduzione italiana (se diversa dall’inglese)', () => {
     // Nomi che non cambiano: unità, sigle, città.
-    const same = (s: string) => /^[\d\W]*$/.test(s) || ['km', 'm', 'cm', 'mm', 'kg', 'g', 'mg', 'l', 'ml', 'mph', 'm/s', 'km/h', 'K', 'Timer', 'Pomodoro', 'Agenda', 'Volume', 'New York', 'Los Angeles', 'Mumbai', 'Sydney', 'Tokyo', 'Dubai', 'Shanghai', 'Auckland', 'lb', 'oz', 'fl oz (US)', 'min', 'Stop', 'Language', 'English', 'Italiano', '°C', '°F', 'Memory'].includes(s);
+    const same = (s: string) => /^[\d\W]*$/.test(s) || ['km', 'm', 'cm', 'mm', 'kg', 'g', 'mg', 'l', 'ml', 'mph', 'm/s', 'km/h', 'K', 'Timer', 'Agenda', 'Volume', 'New York', 'Los Angeles', 'Mumbai', 'Sydney', 'Tokyo', 'Dubai', 'Shanghai', 'Auckland', 'lb', 'oz', 'fl oz (US)', 'min', 'Stop', 'Language', 'English', 'Italiano', '°C', '°F', 'Memory'].includes(s);
     const missing = [...used].filter((s) => !(s in italian) && !same(s));
     expect(missing).toEqual([]);
   });

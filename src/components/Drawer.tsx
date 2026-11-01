@@ -147,7 +147,7 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
         if (style === 'slanted') {
           return (
             <button {...common} className="drawer-item">
-              <WidgetPreview def={def} scale={Math.min(SLOT_W / w, SLOT_H / h)} />
+              <span className="slant"><WidgetPreview def={def} scale={Math.min(SLOT_W / w, SLOT_H / h)} /></span>
             </button>
           );
         }

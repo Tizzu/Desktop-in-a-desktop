@@ -6,20 +6,23 @@ Everything stays **on your computer**: no account, no cloud, no network access, 
 
 ## What's inside
 
-50 widgets in six categories:
+50 widgets in seven categories:
 
-- **Notes** – sticky note (with drawing), notebook (markdown), to-do, blackboard, goal of the day, journal, flashcards, board
-- **Time** – clock, timer, Pomodoro, stopwatch, calendar, world clock, countdown, reminders with notifications, intervals, agenda
+- **Notes** – sticky note (with drawing), notebook (markdown with a formatting toolbar), to-do, blackboard, goal of the day, journal, flashcards, board, snippets (one-click copy)
+- **Time** – clock, timer, focus timer (Pomodoro-style), stopwatch, calendar, world clock, countdown (with a “time left” view of the day, week, month and year), reminders with notifications, intervals, agenda (24 hours, half-hour slots)
 - **Numbers** – calculator, converter, counter, expenses, piggy bank, split the bill, progress, water
 - **Wellbeing** – habits, breathing, eye break, mood, gratitude, sleep, day streak, plant
-- **Links & images** – quick links, search, image, palette, label, frame, container
-- **Fun** – dice, bubbles, sounds, 2048, memory, tic-tac-toe, wheel of fortune, rain, fireplace
+- **Links & images** – quick links, search, image, palette
+- **Layout** – label, container (widgets that only help organise the desk)
+- **Fun** – dice and coin, bubbles, sounds, 2048, memory, tic-tac-toe, lucky wheel, rain, fireplace
 
 Quality-of-life touches:
 
 - **Sticky widgets** – bring one widget's edge close to another's and they snap together; from then on they move as one (grab any title bar). Hover the join to reveal a broken-chain button that detaches them. Hold <kbd>Alt</kbd> while dragging to avoid snapping.
-- **Container** – a widget that holds other widgets: drop them on it (or drag a tool from the drawer onto it), move the container and they follow, drag them out whenever you like. The ▾ in its bar closes it to a single bar, hiding what's inside; ▸ opens it again exactly as it was. Removing a container puts its widgets back on the desk.
+- **Container** – a widget that holds other widgets: drop them on it (or drag a tool from the drawer onto it), move the container and they follow, drag them out whenever you like. You can rename it (✎ or double-click the title) to label your containers, and the ▾ in its bar closes it to a single bar, hiding what's inside; ▸ opens it again exactly as it was. Removing a container puts its widgets back on the desk.
 - **Resizing the window** – positions are measured from the centre of the page (where the optional search bar sits), so widgets keep their place relative to it. If the window gets too small, widgets are pushed back into view instead of making the page scroll, and return where they were when it grows again.
+- **Quick tour** – on first run a short guided tour highlights the drawer, spaces and settings and explains moving, sticking and containers; replay it any time from Settings.
+- **Search shortcut** – with the optional search bar in the centre, a key focuses it; the default is `\`, and you can pick another (even `Ctrl+K`) in Settings.
 - **Backup** – Settings → *Export data* saves everything (all spaces, widgets and settings) to a `.json` file; *Import data* restores it, replacing the current data. *Copy as text* / *Paste from text* do the same through a single line of text you can paste into a chat or an email, no file needed. Handy when moving between computers.
 
 There also a multitude of options for making it more aligned with your idea of a personal workspace.

@@ -113,7 +113,7 @@ test.describe('widget aggiuntivi', () => {
   test('ruota della fortuna estrae una delle opzioni', async ({ page }) => {
     await openApp(page);
     await seed(page, appData([], { tilt: false }));
-    const w = await addWidget(page, 'Wheel of fortune');
+    const w = await addWidget(page, 'Lucky wheel');
     await w.getByRole('button', { name: 'Spin' }).click();
     await expect(w.locator('.wheel-result')).toContainText(/Pizza|Sushi|Salad|Pasta/, { timeout: 6000 });
   });

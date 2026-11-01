@@ -33,7 +33,7 @@ export interface Workspace {
   links?: Link[];
 }
 
-export const CATEGORY_IDS = ['notes', 'time', 'numbers', 'wellbeing', 'media', 'fun'] as const;
+export const CATEGORY_IDS = ['notes', 'time', 'numbers', 'wellbeing', 'media', 'layout', 'fun'] as const;
 export type CategoryId = (typeof CATEGORY_IDS)[number];
 
 export type ThemeId = 'warm' | 'forest' | 'sea' | 'lavender' | 'blossom' | 'system';
@@ -47,17 +47,21 @@ export interface Settings {
   drawerStyle: 'tucked' | 'slanted';
   /** Raggruppa i tool in cassetti virtuali per categoria. */
   categories: boolean;
+  /** Scorciatoia che porta il focus sulla barra di ricerca fissa (vedi shortcut.ts). */
+  searchKey: string;
   /** Barra di ricerca fissa al centro della pagina: non si sposta e i widget lanciati vi rimbalzano. */
   searchBar: boolean;
   /** Palette dell'interfaccia; 'system' segue l'accento del sistema (CSS `AccentColor`). */
   theme: ThemeId;
   /** Lingua dell'interfaccia. */
   language: Lang;
+  /** Vero dopo la visita guidata (completata o saltata): non si ripropone da sola. */
+  tourDone: boolean;
   /** Cassetto aperto ('all' mostra ogni tool). */
   activeCategory: CategoryId | 'all';
 }
 
-export const DEFAULT_SETTINGS: Settings = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, theme: 'warm', activeCategory: 'all' };
+export const DEFAULT_SETTINGS: Settings = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: false, activeCategory: 'all' };
 
 export interface AppData {
   version: number;

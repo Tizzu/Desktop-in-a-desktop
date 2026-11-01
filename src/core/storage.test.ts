@@ -29,7 +29,7 @@ describe('storage', () => {
     };
     const m = migrate(v1);
     expect(m.version).toBe(3);
-    expect(m.settings).toEqual({ language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, theme: 'warm', activeCategory: 'all' });
+    expect(m.settings).toEqual({ language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, activeCategory: 'all' });
     expect(m.workspaces[0]!.widgets[0]!.rot).toBe(0);
   });
 
@@ -175,5 +175,21 @@ describe('database che non risponde', () => {
     saver.schedule(data);
     await expect(saver.flush()).resolves.toBeUndefined();
     expect(readBackup()).toEqual(data);
+  });
+});
+
+describe('widget rimossi e scorciatoia di ricerca', () => {
+  const w = (id: string, type: string) => ({ id, type, x: 0, y: 0, w: 10, h: 10, z: 1, rot: 0, state: {} });
+  it('scarta i widget di un tipo non più esistente, insieme ai loro agganci', () => {
+    const d: any = { version: 3, activeWorkspaceId: 'a', workspaces: [{ id: 'a', name: 'x', order: 0, links: [['p', 'f'], ['p', 'q']], widgets: [w('p', 'postit'), w('f', 'frame'), w('q', 'postit')] }] };
+    const m = migrate(d);
+    expect(m.workspaces[0]!.widgets.map((x) => x.id)).toEqual(['p', 'q']);
+    expect(m.workspaces[0]!.links).toEqual([['p', 'q']]);
+  });
+  it('la scorciatoia mancante o rovinata torna quella predefinita', () => {
+    const base: any = { version: 3, activeWorkspaceId: 'a', workspaces: [] };
+    expect(migrate({ ...base, settings: {} }).settings.searchKey).toBe('\\');
+    expect(migrate({ ...base, settings: { searchKey: 5 } }).settings.searchKey).toBe('\\');
+    expect(migrate({ ...base, settings: { searchKey: 'Ctrl+k' } }).settings.searchKey).toBe('Ctrl+k');
   });
 });

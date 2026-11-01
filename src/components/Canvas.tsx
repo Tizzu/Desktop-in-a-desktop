@@ -8,6 +8,7 @@ import { useT } from '../core/i18n';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SearchBox } from './SearchBox';
 
+const LABEL_MAX = 40; // lunghezza massima del nome di un contenitore
 const MIN_W = 120;
 const MIN_H = 80;
 
@@ -134,9 +135,22 @@ function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatc
     const maxW = host ? host.x + host.w - own.x : view.w - own.x - own.ext.x;
     const maxH = host ? host.y + host.h - own.y : view.h - own.y - own.ext.y;
     let w = widget.w, h = widget.h;
+    // Con proporzioni fisse (es. il camino) il widget si ingrandisce solo in modo uniforme: segue il puntatore sui due assi.
+    const aspect = getWidget(widget.type)?.aspect;
+    const ratio = aspect ? aspect.w / aspect.h : 0;
     const move = (ev: globalThis.PointerEvent) => {
-      w = Math.max(MIN_W, Math.min(widget.w + ev.clientX - sx, Math.max(widget.w, maxW)));
-      h = Math.max(MIN_H, Math.min(widget.h + ev.clientY - sy, Math.max(widget.h, maxH)));
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (ratio) {
+        const body = Math.max(1, widget.h - BAR_H);
+        const scale = ((widget.w + dx) / widget.w + (body + dy) / body) / 2;
+        const minW = Math.max(MIN_W, (MIN_H - BAR_H) * ratio);
+        const maxFit = Math.min(maxW, (maxH - BAR_H) * ratio);
+        w = Math.max(minW, Math.min(widget.w * scale, Math.max(widget.w, maxFit)));
+        h = BAR_H + w / ratio;
+      } else {
+        w = Math.max(MIN_W, Math.min(widget.w + dx, Math.max(widget.w, maxW)));
+        h = Math.max(MIN_H, Math.min(widget.h + dy, Math.max(widget.h, maxH)));
+      }
       dispatch({ type: 'updateWidget', id: widget.id, patch: { w, h } });
     };
     const up = () => {
@@ -255,6 +269,7 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
   const [covered, setCovered] = useState(false);
   const [active, setActive] = useState(false);
   const [view, setView] = useState<View>({ w: 0, h: 0 });
+  const [renaming, setRenaming] = useState<string | null>(null); // id del contenitore di cui si sta cambiando il nome
   const canvasEl = useRef<HTMLDivElement | null>(null);
   const setRefs = useCallback((el: HTMLDivElement | null) => {
     canvasEl.current = el;
@@ -310,7 +325,7 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
         // Mentre si scrive la barra passa davanti ai widget; coperta e inattiva diventa trasparente.
         <div className={`fixed-search-anchor${active ? ' raised' : ''}`}>
           <div ref={barRef} className={`fixed-search${covered && !active ? ' covered' : ''}`}>
-            <SearchBox hotkey covered={covered && !active} onActiveChange={setActive} />
+            <SearchBox hotkey shortcut={settings.searchKey} covered={covered && !active} onActiveChange={setActive} />
           </div>
         </div>
       )}
@@ -320,6 +335,11 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
         if (!def || !p) return null;
         const shut = !!def.container && isCollapsed(w);
         const inside = def.container ? workspace.widgets.filter((c) => c.parent === w.id).length : 0;
+        const label = (def.container && (w.state as { label?: string } | null)?.label) || t(def.label);
+        const rename = (name: string) => {
+          setRenaming(null);
+          dispatch({ type: 'updateWidget', id: w.id, patch: { state: { ...(w.state as object), label: name.trim().slice(0, LABEL_MAX) || undefined } } });
+        };
         return (
           <section
             key={w.id}
@@ -335,7 +355,34 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
             onPointerDown={() => dispatch({ type: 'bringToFront', id: w.id })}
           >
             <header className="widget-bar" onPointerDown={(e) => startGesture(e, w, dispatch, 'move', ctx)}>
-              <span>{def.icon} {t(def.label)}{shut && inside > 0 ? ` (${inside})` : ''}</span>
+              {renaming === w.id ? (
+                <input
+                  className="title-input"
+                  autoFocus
+                  defaultValue={label === t(def.label) ? '' : label}
+                  placeholder={t(def.label)}
+                  maxLength={LABEL_MAX}
+                  aria-label={t('Rename')}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onBlur={(e) => rename(e.currentTarget.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.currentTarget.blur();
+                    if (e.key === 'Escape') setRenaming(null);
+                  }}
+                />
+              ) : (
+                <span onDoubleClick={def.container ? () => setRenaming(w.id) : undefined}>{def.icon} {label}{shut && inside > 0 ? ` (${inside})` : ''}</span>
+              )}
+              {def.container && renaming !== w.id && (
+                <button
+                  className="icon-btn"
+                  aria-label={t('Rename')}
+                  title={t('Rename')}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setRenaming(w.id)}
+                >✎</button>
+              )}
               {def.container && (
                 <button
                   className="icon-btn fold-btn"

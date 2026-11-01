@@ -55,7 +55,7 @@ registerWidget({
   label: 'Bubbles',
   icon: '🫧',
   category: 'fun',
-  defaultSize: { w: 290, h: 240 },
+  defaultSize: { w: 300, h: 310 },
   initialState: () => ({ popped: fresh() }),
   Component: Bubbles,
 });

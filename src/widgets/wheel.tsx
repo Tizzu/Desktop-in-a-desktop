@@ -52,7 +52,7 @@ function Wheel({ state, onChange }: WidgetProps<WheelState>) {
 
 registerWidget({
   type: 'wheel',
-  label: 'Wheel of fortune',
+  label: 'Lucky wheel',
   icon: '🎡',
   category: 'fun',
   defaultSize: { w: 270, h: 410 },

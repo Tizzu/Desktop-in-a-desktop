@@ -4,6 +4,7 @@ import { Canvas } from './components/Canvas';
 import { Drawer } from './components/Drawer';
 import { SettingsMenu } from './components/SettingsMenu';
 import { Tabs } from './components/Tabs';
+import { Tour } from './components/Tour';
 import { LangContext } from './core/i18n';
 import { createAutosaver, createDefaultData, createIdbStorage, readBackup } from './core/storage';
 import { reducer, type Action } from './core/store';
@@ -14,6 +15,7 @@ export function App() {
   const saver = useMemo(() => createAutosaver(storage), [storage]);
   const [data, rawDispatch] = useReducer(reducer, undefined, createDefaultData);
   const [ready, setReady] = useState(false);
+  const [tour, setTour] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const dataRef = useRef(data);
@@ -39,6 +41,7 @@ export function App() {
       .catch(() => undefined) // IndexedDB bloccato o illeggibile: si parte da zero, ma l'app si apre
       .then((saved) => {
         if (saved) rawDispatch({ type: 'load', data: saved });
+        setTour(!saved?.settings.tourDone); // solo al primo avvio
         setReady(true);
       });
   }, [storage]);
@@ -123,8 +126,16 @@ export function App() {
       <Canvas ref={canvasRef} workspace={active} settings={data.settings} dispatch={dispatch} />
       <div className="bottom-bar">
         <Tabs data={data} dispatch={dispatch} />
-        <SettingsMenu data={data} dispatch={dispatch} />
+        <SettingsMenu data={data} dispatch={dispatch} onTour={() => setTour(true)} />
       </div>
+      {tour && (
+        <Tour
+          onClose={() => {
+            setTour(false);
+            if (!data.settings.tourDone) dispatch({ type: 'setSettings', patch: { tourDone: true } });
+          }}
+        />
+      )}
     </div>
     </LangContext.Provider>
   );

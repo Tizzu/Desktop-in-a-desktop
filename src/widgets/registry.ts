@@ -13,6 +13,8 @@ export interface WidgetDef<S = any> {
   category: CategoryId;
   /** Vero se altri widget possono essere messi al suo interno (vedi `container.tsx`). */
   container?: boolean;
+  /** Proporzioni (larghezza:altezza) del corpo del widget, sotto la barra: se presenti, ridimensionando si mantengono. */
+  aspect?: { w: number; h: number };
   defaultSize: { w: number; h: number };
   initialState: () => S;
   Component: ComponentType<WidgetProps<S>>;
@@ -30,5 +32,6 @@ export const CATEGORIES: { id: CategoryId; label: string; icon: string }[] = [
   { id: 'numbers', label: 'Numbers', icon: '🔢' },
   { id: 'wellbeing', label: 'Wellbeing', icon: '🌿' },
   { id: 'media', label: 'Links & images', icon: '🖼️' },
+  { id: 'layout', label: 'Layout', icon: '🧩' },
   { id: 'fun', label: 'Fun', icon: '🎲' },
 ];

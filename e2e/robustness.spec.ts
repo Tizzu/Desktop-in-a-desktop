@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { appData, dragToolTo, openApp, seed, widgetAt, widgets } from './helpers';
+import { appData, dismissTour, dragToolTo, openApp, seed, widgetAt, widgets } from './helpers';
 
 test('dati salvati rovinati non lasciano la pagina bianca', async ({ page }) => {
   await openApp(page);
@@ -44,6 +44,7 @@ test('con il database bloccato l\'app si apre e conserva i dati nella copia di s
   });
   await page.goto('/newtab.html');
   await page.locator('.drawer-item').first().waitFor();
+  await dismissTour(page);
 
   await dragToolTo(page, 'Sticky note', 400, 250);
   await widgets(page).first().locator('textarea').fill('salvato altrove');

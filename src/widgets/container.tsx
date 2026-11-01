@@ -10,7 +10,7 @@ registerWidget({
   type: 'container',
   label: 'Container',
   icon: '📦',
-  category: 'media',
+  category: 'layout',
   container: true,
   defaultSize: { w: 420, h: 320 },
   initialState: () => ({}),

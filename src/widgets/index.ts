@@ -46,6 +46,6 @@ import './wheel';
 import './rain';
 import './fireplace';
 import './label';
-import './frame';
 import './container';
+import './snippets';
 export { getWidget, listWidgets } from './registry';

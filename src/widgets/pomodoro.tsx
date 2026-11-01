@@ -67,7 +67,7 @@ function Pomodoro({ state, onChange }: WidgetProps<PomodoroState>) {
 
 registerWidget({
   type: 'pomodoro',
-  label: 'Pomodoro',
+  label: 'Focus timer',
   icon: '🍅',
   category: 'time',
   defaultSize: { w: 240, h: 230 },

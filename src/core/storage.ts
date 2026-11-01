@@ -1,6 +1,7 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { THEMES } from './themes';
 import { isLang } from './i18n';
+import { validShortcut } from './shortcut';
 import { CATEGORY_IDS, DEFAULT_SETTINGS, SCHEMA_VERSION, type AppData, type Settings } from './types';
 
 export interface Storage {
@@ -34,13 +35,15 @@ export function createIdbStorage(dbName = DB_NAME): Storage {
 function migrateSettings(raw: unknown): Settings {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Settings> & { adaptColors?: boolean };
   const { adaptColors, ...rest } = r;
-  const merged = { ...DEFAULT_SETTINGS, ...rest, theme: rest.theme ?? (adaptColors ? 'system' : DEFAULT_SETTINGS.theme) };
+  // Dati già esistenti: chi li ha creati non ha bisogno della visita guidata, che serve solo a chi parte da zero.
+  const merged = { ...DEFAULT_SETTINGS, tourDone: true, ...rest, theme: rest.theme ?? (adaptColors ? 'system' : DEFAULT_SETTINGS.theme) };
   // Valori sconosciuti (dati vecchi o rovinati) tornano al predefinito invece di rompere l'interfaccia.
   if (!THEMES.some((t) => t.id === merged.theme)) merged.theme = DEFAULT_SETTINGS.theme;
   if (!isLang(merged.language)) merged.language = DEFAULT_SETTINGS.language;
   if (merged.drawerStyle !== 'tucked' && merged.drawerStyle !== 'slanted') merged.drawerStyle = DEFAULT_SETTINGS.drawerStyle;
   if (merged.activeCategory !== 'all' && !CATEGORY_IDS.includes(merged.activeCategory)) merged.activeCategory = 'all';
-  for (const k of ['tilt', 'physics', 'categories', 'searchBar'] as const) if (typeof merged[k] !== 'boolean') merged[k] = DEFAULT_SETTINGS[k];
+  merged.searchKey = validShortcut(merged.searchKey);
+  for (const k of ['tilt', 'physics', 'categories', 'searchBar', 'tourDone'] as const) if (typeof merged[k] !== 'boolean') merged[k] = DEFAULT_SETTINGS[k];
   return merged;
 }
 
@@ -73,6 +76,9 @@ export function sanitize(raw: unknown): AppData | undefined {
 /** Centro approssimato della tela (finestra meno barra dei cassetti e barra degli spazi), per migrare dalle coordinate assolute. */
 const viewCenter = () => (typeof window === 'undefined' ? undefined : { x: window.innerWidth / 2, y: (window.innerHeight - 92) / 2 });
 
+/** Tipi di widget tolti dall'app: vengono scartati dai dati salvati e importati. */
+const REMOVED_TYPES = ['frame'];
+
 // Punto unico per le migrazioni di schema (v1 -> v2: settings e rotazione; v2 -> v3: coordinate rispetto al centro,
 // per cui serve `center`, il centro della tela di quel momento; senza, le posizioni restano com'erano).
 export function migrate(data: AppData, center?: { x: number; y: number }): AppData {
@@ -81,7 +87,8 @@ export function migrate(data: AppData, center?: { x: number; y: number }): AppDa
     ...data,
     version: SCHEMA_VERSION,
     settings: migrateSettings((data as { settings?: unknown }).settings),
-    workspaces: data.workspaces.map((w) => {
+    workspaces: data.workspaces.map((w0) => {
+      const w = { ...w0, widgets: w0.widgets.filter((x) => !REMOVED_TYPES.includes(x.type)) };
       const ids = new Set(w.widgets.map((x) => x.id));
       const hosts = new Set(w.widgets.filter((x) => typeof x.parent !== 'string').map((x) => x.id));
       const links = (Array.isArray(w.links) ? w.links : []).filter(
