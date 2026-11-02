@@ -1,9 +1,10 @@
+import fs from 'node:fs';
 import { expect, type Locator, type Page } from '@playwright/test';
 
 export const widgets = (page: Page) => page.locator('.canvas .widget');
 
-/** Chiude la visita guidata del primo avvio, se c'è: altrimenti copre la pagina. */
-export async function dismissTour(page: Page) {
+/** Chiude la visita guidata del primo avvio e le novità di una versione, se ci sono: altrimenti coprono la pagina. */
+export async function dismissTour(page: Page, opts: { keepChangelog?: boolean } = {}) {
   const skip = page.getByRole('button', { name: 'Skip tour' });
   if (await skip.isVisible()) {
     await skip.click();
@@ -11,6 +12,12 @@ export async function dismissTour(page: Page) {
     // Saltarla è una modifica da salvare: se si aspetta il salvataggio, non sovrascrive i dati che il test scrive subito dopo.
     // (se il database è bloccato apposta dal test, non c'è niente da attendere)
     await expect.poll(async () => (await readSaved(page))?.settings?.tourDone, { timeout: 3000 }).toBe(true).catch(() => {});
+  }
+  const news = page.getByRole('dialog', { name: 'What\'s new' });
+  if (!opts.keepChangelog && (await news.isVisible())) {
+    await news.getByRole('button', { name: 'Close' }).click();
+    await expect(news).toBeHidden();
+    await expect.poll(async () => (await readSaved(page))?.settings?.seenVersion, { timeout: 3000 }).toBe(VERSION).catch(() => {});
   }
 }
 
@@ -61,7 +68,10 @@ export async function settled(w: Locator) {
 
 // --- Dati di partenza scritti direttamente nel database, per provare casi che a mano sono scomodi ---
 
-export const DEFAULT_SETTINGS = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, activeCategory: 'all' };
+// Le novità dell'ultima versione si mostrano solo a chi aggiorna: i dati di prova partono già "visti".
+const VERSION = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
+
+export const DEFAULT_SETTINGS = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, timerSound: true, seenVersion: VERSION, activeCategory: 'all' };
 
 export function appData(widgetList: unknown[], settings: Record<string, unknown> = {}) {
   return {
@@ -76,7 +86,7 @@ export const widgetAt = (id: string, type: string, x: number, y: number, state: 
   ({ id, type, x, y, w: 260, h: 200, z: 1, rot: 0, state });
 
 /** Scrive `data` nel database (che l'app ha già creato aprendosi) e ricarica la pagina. */
-export async function seed(page: Page, data: unknown) {
+export async function seed(page: Page, data: unknown, opts: { keepChangelog?: boolean } = {}) {
   await page.evaluate(
     (d) =>
       new Promise<void>((resolve, reject) => {
@@ -93,7 +103,7 @@ export async function seed(page: Page, data: unknown) {
   );
   await page.reload();
   await page.locator('.drawer-item').first().waitFor();
-  await dismissTour(page);
+  await dismissTour(page, opts);
 }
 
 /** Legge cosa c'è salvato nel database. */

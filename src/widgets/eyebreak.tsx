@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { clearReminder, formatClock, setReminder, useTick } from './timerCore';
+import { clearReminder, formatClock, setReminder, useFinishChime, useTick } from './timerCore';
 import { registerWidget, type WidgetProps } from './registry';
 import { useT } from '../core/i18n';
 
@@ -16,6 +16,7 @@ function EyeBreak({ state, onChange }: WidgetProps<EyeState>) {
   useTick(on, 500);
   const now = Date.now();
   const looking = on && now >= state.endsAt!;
+  useFinishChime(state.endsAt, looking);
   const lookLeft = looking ? state.endsAt! + LOOK - now : 0;
 
   const restart = (from: number) => {

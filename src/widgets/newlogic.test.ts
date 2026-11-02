@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { moveCard, type Columns } from './board';
+import { moveCard, placeCard, type Columns } from './board';
 import { remaining } from './countdown';
 import { daysBetween } from './dates';
 import { canMove, deck, emptyGrid, FACES, slide, spawn, ticTacToe, type Mark } from './games';
@@ -102,5 +102,28 @@ describe('memory', () => {
     const d = deck();
     expect(d).toHaveLength(16);
     FACES.forEach((f) => expect(d.filter((c) => c === f)).toHaveLength(2));
+  });
+});
+
+describe('bacheca: trascinamento delle carte', () => {
+  const c = (id: string) => ({ id, text: id });
+  const cols = (): [ReturnType<typeof c>[], ReturnType<typeof c>[], ReturnType<typeof c>[]] => [[c('a'), c('b'), c('c')], [c('d')], []];
+  const ids = (x: ReturnType<typeof cols>) => x.map((col) => col.map((k) => k.id).join(''));
+  it('cambia colonna nella posizione indicata', () => {
+    expect(ids(placeCard(cols(), 'b', 1, 0))).toEqual(['ac', 'bd', '']);
+    expect(ids(placeCard(cols(), 'b', 1, 1))).toEqual(['ac', 'db', '']);
+    expect(ids(placeCard(cols(), 'a', 2, 0))).toEqual(['bc', 'd', 'a']);
+  });
+  it('riordina nella stessa colonna (indice contato senza la carta)', () => {
+    expect(ids(placeCard(cols(), 'a', 0, 2))).toEqual(['bca', 'd', '']);
+    expect(ids(placeCard(cols(), 'c', 0, 0))).toEqual(['cab', 'd', '']);
+    expect(ids(placeCard(cols(), 'b', 0, 1))).toEqual(['abc', 'd', '']); // dov'era
+  });
+  it('indici fuori misura vanno ai bordi; carte o colonne inesistenti non cambiano nulla', () => {
+    expect(ids(placeCard(cols(), 'a', 1, 99))).toEqual(['bc', 'da', '']);
+    expect(ids(placeCard(cols(), 'a', 1, -5))).toEqual(['bc', 'ad', '']);
+    const c0 = cols();
+    expect(placeCard(c0, 'zz', 1, 0)).toBe(c0);
+    expect(placeCard(c0, 'a', 3, 0)).toBe(c0);
   });
 });

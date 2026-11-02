@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
+import { chime } from '../core/sound';
 
 // L'alarm fa suonare la notifica anche a scheda chiusa (vedi entrypoints/background.ts).
 const alarmName = (endsAt: number) => `timer:${endsAt}`;
@@ -27,4 +28,11 @@ export function useTick(active: boolean, every = 250) {
     const t = setInterval(() => set((n) => n + 1), every);
     return () => clearInterval(t);
   }, [active, every]);
+}
+
+/** Suona la campana quando un timer appena scaduto: non se la pagina si apre su un timer scaduto da tempo (c'era già la notifica). */
+export function useFinishChime(endsAt: number | null, finished: boolean) {
+  useEffect(() => {
+    if (finished && endsAt !== null && Date.now() - endsAt < 5000) chime();
+  }, [finished, endsAt]);
 }

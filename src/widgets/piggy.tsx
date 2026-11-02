@@ -42,5 +42,6 @@ registerWidget({
   category: 'numbers',
   defaultSize: { w: 260, h: 280 },
   initialState: () => ({ label: '', goal: 0, saved: 0 }),
+  hasData: (s: PiggyState) => s.saved > 0,
   Component: Piggy,
 });

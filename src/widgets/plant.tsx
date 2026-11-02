@@ -32,5 +32,6 @@ registerWidget({
   category: 'wellbeing',
   defaultSize: { w: 230, h: 250 },
   initialState: () => ({ watered: [] }),
+  hasData: (s: PlantState) => s.watered.length > 0,
   Component: Plant,
 });

@@ -71,7 +71,7 @@ registerWidget({
   label: 'Countdown',
   icon: '📅',
   category: 'time',
-  defaultSize: { w: 260, h: 300 },
+  defaultSize: { w: 310, h: 300 },
   initialState: () => ({ label: '', at: '', view: 'countdown' }),
   Component: Countdown,
 });

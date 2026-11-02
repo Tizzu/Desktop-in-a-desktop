@@ -29,7 +29,7 @@ describe('storage', () => {
     };
     const m = migrate(v1);
     expect(m.version).toBe(3);
-    expect(m.settings).toEqual({ language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, activeCategory: 'all' });
+    expect(m.settings).toEqual({ language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, timerSound: true, seenVersion: '', activeCategory: 'all' });
     expect(m.workspaces[0]!.widgets[0]!.rot).toBe(0);
   });
 

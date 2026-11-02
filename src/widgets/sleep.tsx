@@ -36,5 +36,6 @@ registerWidget({
   category: 'wellbeing',
   defaultSize: { w: 260, h: 250 },
   initialState: () => ({ hours: {} }),
+  hasData: (s: SleepState) => Object.keys(s.hours).length > 0,
   Component: Sleep,
 });

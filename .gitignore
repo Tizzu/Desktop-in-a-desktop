@@ -5,3 +5,5 @@ node_modules
 test-results
 playwright-report
 CLAUDE.md
+# Widget solo locali: mai committati né inclusi nel pacchetto dello Store
+src/widgets/*.local.tsx

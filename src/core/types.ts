@@ -55,13 +55,17 @@ export interface Settings {
   theme: ThemeId;
   /** Lingua dell'interfaccia. */
   language: Lang;
+  /** Suoni (campane calme) quando un timer finisce. */
+  timerSound: boolean;
+  /** Ultima versione di cui l'utente ha visto le novità; vuota se mai. */
+  seenVersion: string;
   /** Vero dopo la visita guidata (completata o saltata): non si ripropone da sola. */
   tourDone: boolean;
   /** Cassetto aperto ('all' mostra ogni tool). */
   activeCategory: CategoryId | 'all';
 }
 
-export const DEFAULT_SETTINGS: Settings = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: false, activeCategory: 'all' };
+export const DEFAULT_SETTINGS: Settings = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: false, timerSound: true, seenVersion: '', activeCategory: 'all' };
 
 export interface AppData {
   version: number;

@@ -32,5 +32,6 @@ registerWidget({
   category: 'numbers',
   defaultSize: { w: 220, h: 230 },
   initialState: () => ({ label: '', value: 0, step: 1, target: 0 }),
+  hasData: (s: CounterState) => s.value !== 0,
   Component: Counter,
 });

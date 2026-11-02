@@ -3,6 +3,9 @@ import { addDays, dayKey } from './dates';
 import { useToday } from './useToday';
 import { useT, useLocale } from '../core/i18n';
 
+/** Vero se almeno un giorno ha una riga scritta. */
+export const hasEntries = (entries: Record<string, string[]>) => Object.values(entries).some((rows) => rows.some((r) => r.trim() !== ''));
+
 /** Righe di testo per giorno, con frecce per sfogliare i giorni (usato da diario e gratitudine). */
 export function DayEntries({ entries, lines, placeholder, onChange }: {
   entries: Record<string, string[]>;

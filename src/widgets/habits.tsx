@@ -63,5 +63,6 @@ registerWidget({
   category: 'wellbeing',
   defaultSize: { w: 330, h: 250 },
   initialState: () => ({ habits: [{ id: 'demo', name: 'Drink water', days: [] }] }),
+  hasData: (s: HabitsState) => s.habits.some((h) => h.days.length > 0),
   Component: Habits,
 });

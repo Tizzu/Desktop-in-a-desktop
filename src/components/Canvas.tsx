@@ -397,7 +397,11 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
                 className="icon-btn"
                 aria-label={t('Remove widget')}
                 onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => dispatch({ type: 'removeWidget', id: w.id })}
+                onClick={() => {
+                  // I widget che tengono traccia dell'utente (diario, abitudini…) chiedono conferma se hanno già dati.
+                  if (def.hasData?.(w.state) && !confirm(t('This widget holds your entries. Remove it anyway?'))) return;
+                  dispatch({ type: 'removeWidget', id: w.id });
+                }}
               >×</button>
             </header>
             <div className="widget-body">

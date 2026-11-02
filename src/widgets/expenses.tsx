@@ -46,5 +46,6 @@ registerWidget({
   category: 'numbers',
   defaultSize: { w: 300, h: 340 },
   initialState: () => ({ entries: [] }),
+  hasData: (s: ExpensesState) => s.entries.length > 0,
   Component: Expenses,
 });

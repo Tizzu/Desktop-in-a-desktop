@@ -13,6 +13,8 @@ export interface WidgetDef<S = any> {
   category: CategoryId;
   /** Vero se altri widget possono essere messi al suo interno (vedi `container.tsx`). */
   container?: boolean;
+  /** Vero se lo stato contiene dati dell'utente: prima di rimuovere il widget si chiede conferma. */
+  hasData?: (state: S) => boolean;
   /** Proporzioni (larghezza:altezza) del corpo del widget, sotto la barra: se presenti, ridimensionando si mantengono. */
   aspect?: { w: number; h: number };
   defaultSize: { w: number; h: number };

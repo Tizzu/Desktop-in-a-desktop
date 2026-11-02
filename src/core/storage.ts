@@ -43,7 +43,8 @@ function migrateSettings(raw: unknown): Settings {
   if (merged.drawerStyle !== 'tucked' && merged.drawerStyle !== 'slanted') merged.drawerStyle = DEFAULT_SETTINGS.drawerStyle;
   if (merged.activeCategory !== 'all' && !CATEGORY_IDS.includes(merged.activeCategory)) merged.activeCategory = 'all';
   merged.searchKey = validShortcut(merged.searchKey);
-  for (const k of ['tilt', 'physics', 'categories', 'searchBar', 'tourDone'] as const) if (typeof merged[k] !== 'boolean') merged[k] = DEFAULT_SETTINGS[k];
+  if (typeof merged.seenVersion !== 'string') merged.seenVersion = DEFAULT_SETTINGS.seenVersion;
+  for (const k of ['tilt', 'physics', 'categories', 'searchBar', 'tourDone', 'timerSound'] as const) if (typeof merged[k] !== 'boolean') merged[k] = DEFAULT_SETTINGS[k];
   return merged;
 }
 

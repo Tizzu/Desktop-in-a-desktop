@@ -4,10 +4,13 @@ import { Canvas } from './components/Canvas';
 import { Drawer } from './components/Drawer';
 import { SettingsMenu } from './components/SettingsMenu';
 import { Tabs } from './components/Tabs';
+import { Changelog } from './components/Changelog';
 import { Tour } from './components/Tour';
 import { LangContext } from './core/i18n';
 import { createAutosaver, createDefaultData, createIdbStorage, readBackup } from './core/storage';
 import { reducer, type Action } from './core/store';
+import { setTimerSound } from './core/sound';
+import { appVersion, compareVersions } from './core/version';
 import { createSync, mergeRemoteState, prepare, toShared, type Sync } from './core/sync';
 
 export function App() {
@@ -16,6 +19,8 @@ export function App() {
   const [data, rawDispatch] = useReducer(reducer, undefined, createDefaultData);
   const [ready, setReady] = useState(false);
   const [tour, setTour] = useState(false);
+  const [log, setLog] = useState(false); // novità della versione
+  const firstRun = useRef(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const dataRef = useRef(data);
@@ -42,6 +47,10 @@ export function App() {
       .then((saved) => {
         if (saved) rawDispatch({ type: 'load', data: saved });
         setTour(!saved?.settings.tourDone); // solo al primo avvio
+        // Chi aggiorna vede le novità una volta sola; chi parte da zero ha già la visita guidata.
+        const v = appVersion();
+        firstRun.current = !saved;
+        setLog(!!saved && !!v && saved.settings.tourDone && compareVersions(v, saved.settings.seenVersion) > 0);
         setReady(true);
       });
   }, [storage]);
@@ -62,6 +71,12 @@ export function App() {
       syncRef.current = undefined;
     };
   }, [ready]);
+
+  // Un'installazione nuova parte già "aggiornata": le novità si vedranno dalla versione successiva.
+  useEffect(() => {
+    if (ready && firstRun.current) dispatch({ type: 'setSettings', patch: { seenVersion: appVersion() } });
+  }, [ready, dispatch]);
+  useEffect(() => setTimerSound(data.settings.timerSound), [data.settings.timerSound]);
 
   // Salva le modifiche locali (debounce), solo dopo il caricamento iniziale.
   useEffect(() => {
@@ -126,8 +141,16 @@ export function App() {
       <Canvas ref={canvasRef} workspace={active} settings={data.settings} dispatch={dispatch} />
       <div className="bottom-bar">
         <Tabs data={data} dispatch={dispatch} />
-        <SettingsMenu data={data} dispatch={dispatch} onTour={() => setTour(true)} />
+        <SettingsMenu data={data} dispatch={dispatch} onTour={() => setTour(true)} onChangelog={() => setLog(true)} />
       </div>
+      {log && (
+        <Changelog
+          onClose={() => {
+            setLog(false);
+            if (data.settings.seenVersion !== appVersion()) dispatch({ type: 'setSettings', patch: { seenVersion: appVersion() } });
+          }}
+        />
+      )}
       {tour && (
         <Tour
           onClose={() => {

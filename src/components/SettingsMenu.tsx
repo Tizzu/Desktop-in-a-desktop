@@ -1,28 +1,25 @@
 import { useEffect, useRef, useState, type Dispatch } from 'react';
-import { browser } from 'wxt/browser';
 import { LANGUAGES, isLang, useT } from '../core/i18n';
 import type { Action } from '../core/store';
 import { THEMES } from '../core/themes';
 import { DEFAULT_SHORTCUT, eventToShortcut, shortcutLabel } from '../core/shortcut';
+import { appVersion } from '../core/version';
 import { exportFileName, exportJson, exportText, parseImport, parseImportText } from '../core/backup';
 import type { AppData } from '../core/types';
 
-const OPTIONS: { key: 'tilt' | 'physics' | 'categories' | 'searchBar'; label: string }[] = [
+const OPTIONS: { key: 'tilt' | 'physics' | 'categories' | 'searchBar' | 'timerSound'; label: string }[] = [
   { key: 'categories', label: 'Drawers by category' },
   { key: 'searchBar', label: 'Search bar in the centre' },
   { key: 'tilt', label: 'Random tilt on widgets' },
   { key: 'physics', label: 'Throw with momentum' },
+  { key: 'timerSound', label: 'Timer sounds' },
 ];
 
 const REPO = 'https://github.com/Tizzu/Desktop-in-a-desktop';
 
-function version() {
-  try { return browser.runtime.getManifest().version; } catch { return ''; }
-}
-
 type Settings = AppData['settings'];
 
-export function SettingsMenu({ data, dispatch, onTour }: { data: AppData; dispatch: Dispatch<Action>; onTour: () => void }) {
+export function SettingsMenu({ data, dispatch, onTour, onChangelog }: { data: AppData; dispatch: Dispatch<Action>; onTour: () => void; onChangelog: () => void }) {
   const t = useT();
   const settings = data.settings;
   const [open, setOpen] = useState(false);
@@ -162,7 +159,8 @@ export function SettingsMenu({ data, dispatch, onTour }: { data: AppData; dispat
           )}
           <button className="backup-go tour-link" onClick={() => { setOpen(false); onTour(); }}>{t('Quick tour')}</button>
           <footer className="credits">
-            <strong>Desktop in a Desktop</strong> {version() && `v${version()}`}
+            <strong>Desktop in a Desktop</strong>{' '}
+            {appVersion() && <button className="version-btn" title={t('What\'s new')} onClick={() => { setOpen(false); onChangelog(); }}>v{appVersion()}</button>}
             <span>{t('Made by {name}', { name: 'Valentino Artizzu' })}</span>
             <span>{t('Free software, MIT licence · everything stays on your computer')}</span>
             <a href={REPO} target="_blank" rel="noopener noreferrer">{t('Source code and feedback')}</a>

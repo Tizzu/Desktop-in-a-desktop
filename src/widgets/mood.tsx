@@ -34,5 +34,6 @@ registerWidget({
   category: 'wellbeing',
   defaultSize: { w: 270, h: 190 },
   initialState: () => ({ log: {} }),
+  hasData: (s: MoodState) => Object.keys(s.log).length > 0,
   Component: Mood,
 });

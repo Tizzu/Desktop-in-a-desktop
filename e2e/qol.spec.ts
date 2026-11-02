@@ -322,3 +322,231 @@ test('snippets: si aggiungono, si copiano con un clic, si modificano e si tolgon
   await widgets(page).first().getByRole('button', { name: 'Delete' }).last().click();
   await expect(widgets(page).first().locator('.snip')).toHaveCount(1);
 });
+
+test('bacheca: le carte si trascinano tra le colonne e si riordinano', async ({ page }) => {
+  await openApp(page);
+  await seed(page, appData([], { tilt: false }));
+  const w = await addWidget(page, 'Board');
+  for (const text of ['uno', 'due', 'tre']) {
+    await w.getByLabel('New card', { exact: true }).fill(text);
+    await w.getByLabel('New card', { exact: true }).press('Enter');
+  }
+  const col = (name: string) => w.getByRole('region', { name });
+  const texts = (name: string) => col(name).locator('.kanban-card > span').allTextContents();
+  expect(await texts('To do')).toEqual(['uno', 'due', 'tre']);
+
+  const drag = async (from: string, to: { x: number; y: number }) => {
+    const b = (await w.locator('.kanban-card', { hasText: from }).boundingBox())!;
+    await page.mouse.move(b.x + 20, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+    await expect(w.locator('.kanban-drop')).toHaveCount(1); // l'indicatore mostra dove cadrà
+    await page.mouse.up();
+  };
+  // "due" nella colonna In progress (vuota)
+  const mid = (await col('In progress').boundingBox())!;
+  await drag('due', { x: mid.x + mid.width / 2, y: mid.y + 60 });
+  expect(await texts('To do')).toEqual(['uno', 'tre']);
+  expect(await texts('In progress')).toEqual(['due']);
+
+  // "tre" sopra "uno": si riordina nella stessa colonna
+  const first = (await w.locator('.kanban-card', { hasText: 'uno' }).boundingBox())!;
+  await drag('tre', { x: first.x + 20, y: first.y + 2 });
+  expect(await texts('To do')).toEqual(['tre', 'uno']);
+
+  // un clic senza trascinare non sposta niente
+  await w.locator('.kanban-card', { hasText: 'uno' }).click();
+  expect(await texts('To do')).toEqual(['tre', 'uno']);
+
+  await page.reload();
+  await page.locator('.drawer-item').first().waitFor();
+  expect(await widgets(page).first().getByRole('region', { name: 'In progress' }).locator('.kanban-card > span').allTextContents()).toEqual(['due']);
+});
+
+test.describe('timer di concentrazione', () => {
+  test('si personalizza e le impostazioni restano', async ({ page }) => {
+    await openApp(page);
+    await seed(page, appData([], { tilt: false }));
+    const w = await addWidget(page, 'Focus timer');
+    await expect(w.locator('.timer-time')).toHaveText('25:00');
+    await w.getByRole('button', { name: 'Customise' }).click();
+    await w.getByLabel('Focus (min)').fill('10');
+    await w.getByLabel('Short break (min)').fill('2');
+    await w.getByLabel('Sessions before long break').fill('3');
+    await w.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(w.locator('.timer-time')).toHaveText('10:00');
+    await expect(w.locator('.pomo-dots span')).toHaveCount(3);
+    await page.reload();
+    await page.locator('.drawer-item').first().waitFor();
+    await expect(widgets(page).first().locator('.timer-time')).toHaveText('10:00');
+  });
+
+  test('con l\'avvio automatico la fase successiva parte da sola; senza, aspetta', async ({ page }) => {
+    await page.clock.install({ time: new Date(2026, 9, 28, 10, 0, 0) });
+    await openApp(page);
+    await seed(page, appData([], { tilt: false }));
+    const w = await addWidget(page, 'Focus timer');
+    await w.getByRole('button', { name: 'Customise' }).click();
+    await w.getByLabel('Focus (min)').fill('1');
+    await w.getByLabel('Short break (min)').fill('2');
+    await w.getByRole('button', { name: 'Done', exact: true }).click();
+
+    // Senza avvio automatico: finita la fase si ferma e propone "Next".
+    await w.getByRole('button', { name: 'Start' }).click();
+    await page.clock.fastForward(61_000);
+    await expect(w.getByRole('button', { name: 'Next' })).toBeVisible();
+    await w.getByRole('button', { name: 'Next' }).click();
+    await expect(w.locator('.timer-note')).toHaveText('Short break');
+    await expect(w.getByRole('button', { name: 'Start' })).toBeVisible(); // ferma
+
+    // Con l'avvio automatico: dalla pausa si passa da sola alla concentrazione.
+    await w.getByRole('button', { name: 'Customise' }).click();
+    await w.getByLabel('Start the next phase automatically').check();
+    await w.getByRole('button', { name: 'Done', exact: true }).click();
+    await w.getByRole('button', { name: 'Start' }).click();
+    await page.clock.fastForward(121_000);
+    await expect(w.locator('.timer-note')).toHaveText('Focus');
+    await expect(w.getByRole('button', { name: 'Pause' })).toBeVisible(); // già in corso
+  });
+});
+
+test('obiettivo: con poca altezza la scritta non esce sopra la barra del titolo, e si può scorrere', async ({ page }) => {
+  await openApp(page);
+  await seed(page, appData([{ id: 'g', type: 'goal', x: -150, y: -100, w: 290, h: 74, z: 1, rot: 0, state: { goal: 'una cosa molto importante da fare oggi', done: false, date: new Date().toLocaleDateString('sv') } }], { tilt: false }));
+  const w = widgets(page).first();
+  const bar = (await w.locator('.widget-bar').boundingBox())!;
+  const label = (await w.locator('.goal-label').boundingBox())!;
+  expect(label.y).toBeGreaterThanOrEqual(bar.y + bar.height - 1);
+  const body = w.locator('.widget-body');
+  expect(await body.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true); // il resto si raggiunge scorrendo
+});
+
+test('conto alla rovescia: le due schede stanno su una riga già alla dimensione iniziale (anche in italiano)', async ({ page }) => {
+  await openApp(page);
+  await seed(page, appData([], { tilt: false, language: 'it' }));
+  const w = await addWidget(page, 'Conto alla rovescia');
+  const tabs = w.locator('.cd-views .chip');
+  const [a, b] = [(await tabs.nth(0).boundingBox())!, (await tabs.nth(1).boundingBox())!];
+  expect(Math.abs(a.y - b.y)).toBeLessThan(2);
+  expect(b.x + b.width).toBeLessThanOrEqual((await w.boundingBox())!.x + (await w.boundingBox())!.width);
+});
+
+test('chiudere un widget che tiene traccia dell\'utente chiede conferma, solo se ha dati', async ({ page }) => {
+  await openApp(page);
+  await seed(page, appData([], { tilt: false }));
+  const w = await addWidget(page, 'Journal', 400, 250);
+  await w.getByRole('button', { name: 'Remove widget' }).click(); // vuoto: via subito, senza domande
+  await expect(widgets(page)).toHaveCount(0);
+
+  const j = await addWidget(page, 'Journal', 400, 250);
+  await j.getByLabel('One line about the day 1').fill('giornata tranquilla');
+  let asked = '';
+  page.once('dialog', (d) => { asked = d.message(); void d.dismiss(); });
+  await j.getByRole('button', { name: 'Remove widget' }).click();
+  await expect.poll(() => asked).toContain('holds your entries');
+  await expect(widgets(page)).toHaveCount(1); // annullato: resta
+  page.once('dialog', (d) => void d.accept());
+  await j.getByRole('button', { name: 'Remove widget' }).click();
+  await expect(widgets(page)).toHaveCount(0);
+
+  // Un widget che non tiene traccia (un post-it) si chiude senza domande.
+  const n = await addWidget(page, 'Sticky note', 400, 250);
+  await n.locator('textarea').fill('appunto');
+  await n.getByRole('button', { name: 'Remove widget' }).click();
+  await expect(widgets(page)).toHaveCount(0);
+});
+
+test('serie di giorni: etichetta fissa "Days…", testo libero e partenza da un numero', async ({ page }) => {
+  await openApp(page);
+  await seed(page, appData([], { tilt: false }));
+  const w = await addWidget(page, 'Day streak');
+  await expect(w).toContainText('Days…');
+  await w.getByLabel('Name').fill('without sugar');
+  await w.getByLabel('Starting count').fill('12');
+  await expect(w.locator('.counter-value')).toContainText('12');
+  await page.reload();
+  await page.locator('.drawer-item').first().waitFor();
+  const again = widgets(page).first();
+  await expect(again.locator('.counter-value')).toContainText('12');
+  await expect(again.getByLabel('Name')).toHaveValue('without sugar');
+  page.once('dialog', (d) => void d.accept());
+  await again.getByRole('button', { name: 'Restart from today' }).click();
+  await expect(again.locator('.counter-value')).toContainText('0');
+  await expect(again.getByLabel('Starting count')).toHaveValue('0');
+});
+
+test.describe('suoni dei timer', () => {
+  const countBells = (page: Page) => page.evaluate(() => (window as unknown as { __bells: number }).__bells);
+  test.beforeEach(async ({ page }) => {
+    // Conta le note che il browser avvierebbe, senza dipendere dall'audio vero.
+    await page.addInitScript(() => {
+      (window as unknown as { __bells: number }).__bells = 0;
+      const start = OscillatorNode.prototype.start;
+      OscillatorNode.prototype.start = function (...a) { (window as unknown as { __bells: number }).__bells++; return start.apply(this, a as []); };
+    });
+  });
+
+  test('a fine timer suona una campana; spenti nelle impostazioni, no', async ({ page }) => {
+    await page.clock.install({ time: new Date(2026, 9, 28, 10, 0, 0) });
+    await openApp(page);
+    await seed(page, appData([], { tilt: false }));
+    const w = await addWidget(page, 'Timer');
+    await w.getByRole('button', { name: 'Start' }).click();
+    expect(await countBells(page)).toBe(0);
+    await page.clock.fastForward(5 * 60_000 + 1000);
+    await expect(w.locator('.timer-time.done')).toBeVisible();
+    await expect.poll(() => countBells(page)).toBeGreaterThanOrEqual(3); // tre note, ognuna con i suoi armonici
+
+    await w.getByRole('button', { name: 'Restart' }).click();
+    const before = await countBells(page);
+    await openSettings(page);
+    await page.getByLabel('Timer sounds').uncheck();
+    await openSettings(page);
+    await w.getByRole('button', { name: 'Start' }).click();
+    await page.clock.fastForward(5 * 60_000 + 1000);
+    await expect(w.locator('.timer-time.done')).toBeVisible();
+    expect(await countBells(page)).toBe(before);
+  });
+});
+
+test.describe('novità della versione', () => {
+  const dialog = (page: Page) => page.getByRole('dialog', { name: 'What\'s new' });
+  const old = (extra: Record<string, unknown> = {}) => appData([], { seenVersion: '0.0.1', ...extra });
+
+  test('dopo un aggiornamento si apre una volta sola; la versione nelle impostazioni la riapre', async ({ page }) => {
+    await openApp(page);
+    await seed(page, old(), { keepChangelog: true });
+    await expect(dialog(page)).toBeVisible();
+    await expect(dialog(page)).toContainText('Snippets');
+    await expect(dialog(page)).toContainText('current');
+    await dialog(page).getByRole('button', { name: 'Close' }).click();
+    await expect(dialog(page)).toHaveCount(0);
+
+    await page.reload();
+    await page.locator('.drawer-item').first().waitFor();
+    await expect(dialog(page)).toHaveCount(0); // mai più, fino al prossimo aggiornamento
+
+    await openSettings(page);
+    await page.getByRole('button', { name: /^v\d+\.\d+\.\d+$/ }).click();
+    await expect(dialog(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(dialog(page)).toHaveCount(0);
+  });
+
+  test('chi parte da zero non la vede (c\'è la visita guidata); chi ha già visto la versione neanche', async ({ page }) => {
+    await page.goto('/newtab.html');
+    await page.locator('.drawer-item').first().waitFor();
+    await expect(page.getByRole('dialog', { name: 'Quick tour' })).toBeVisible();
+    await expect(dialog(page)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Skip tour' }).click();
+    await page.reload();
+    await page.locator('.drawer-item').first().waitFor();
+    await expect(dialog(page)).toHaveCount(0); // l'installazione nuova ha già "visto" la versione attuale
+  });
+
+  test('una versione salvata più recente di quella installata non le riapre', async ({ page }) => {
+    await openApp(page);
+    await seed(page, old({ seenVersion: '99.0.0' }), { keepChangelog: true });
+    await expect(dialog(page)).toHaveCount(0);
+  });
+});

@@ -48,4 +48,6 @@ import './fireplace';
 import './label';
 import './container';
 import './snippets';
+// Widget solo locali (*.local.tsx): non sono nel repository (.gitignore) e restano fuori dalle build per lo Store (vedi wxt.config.ts).
+import.meta.glob('./*.local.tsx', { eager: true });
 export { getWidget, listWidgets } from './registry';

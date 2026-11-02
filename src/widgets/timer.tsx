@@ -1,4 +1,4 @@
-import { clearAlarm, formatClock, setAlarm, useTick } from './timerCore';
+import { clearAlarm, formatClock, setAlarm, useFinishChime, useTick } from './timerCore';
 import { registerWidget, type WidgetProps } from './registry';
 import { useT } from '../core/i18n';
 
@@ -21,6 +21,7 @@ function Timer({ state, onChange }: WidgetProps<TimerState>) {
 
   const remaining = running ? Math.max(0, state.endsAt! - Date.now()) : (state.left ?? state.duration);
   const finished = running && remaining === 0;
+  useFinishChime(state.endsAt, finished);
   const idle = !running && state.left === null;
 
   const start = () => {

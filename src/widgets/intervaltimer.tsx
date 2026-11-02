@@ -1,4 +1,6 @@
 import { intervalPhase, totalMs, type IntervalConfig } from './intervals';
+import { useEffect, useRef } from 'react';
+import { chime, ping } from '../core/sound';
 import { clearAlarm, formatClock, setAlarm, useTick } from './timerCore';
 import { registerWidget, type WidgetProps } from './registry';
 import { useT } from '../core/i18n';
@@ -12,8 +14,17 @@ function IntervalTimer({ state, onChange }: WidgetProps<IntervalState>) {
   const running = state.startedAt !== null;
   useTick(running, 250);
   const p = running ? intervalPhase(state, Date.now() - state.startedAt!) : null;
-  const num = (key: keyof IntervalConfig, min: number) => (e: { target: { value: string } }) =>
-    onChange({ ...state, [key]: Math.max(min, Math.floor(Number(e.target.value)) || min) });
+  // Una nota discreta a ogni cambio di fase, e la campana alla fine.
+  const key = p ? `${p.phase}-${p.round}` : '';
+  const last = useRef(key);
+  useEffect(() => {
+    const before = last.current;
+    last.current = key;
+    if (!before || !key || before === key) return;
+    if (p?.phase === 'done') chime(); else ping();
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const num = (field: keyof IntervalConfig, min: number) => (e: { target: { value: string } }) =>
+    onChange({ ...state, [field]: Math.max(min, Math.floor(Number(e.target.value)) || min) });
 
   const start = () => {
     const startedAt = Date.now();

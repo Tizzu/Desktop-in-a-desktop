@@ -75,5 +75,6 @@ registerWidget({
   category: 'wellbeing',
   defaultSize: { w: 320, h: 270 },
   initialState: () => ({ goal: 2000, glass: 250, log: {} }),
+  hasData: (s: WaterState) => Object.values(s.log).some((ml) => ml > 0),
   Component: Water,
 });
