@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type RefObject } from 'react';
 import { fitCoord, tiltExtent } from '../core/physics';
+import { MAX_TILT } from '../core/space';
 import { BAR_H as TITLE_H } from '../core/layout';
 import type { CategoryId, WidgetInstance } from '../core/types';
 import { CATEGORIES, listWidgets, type WidgetDef } from '../widgets/registry';
@@ -28,9 +29,11 @@ interface Props {
   onDrop: (def: WidgetDef, x: number, y: number, host?: string) => void;
   /** Widget dello spazio attivo: i tool che pendono sopra di loro si ritraggono. */
   widgets: WidgetInstance[];
+  /** Spazio con il layout bloccato: non si possono aggiungere widget. */
+  locked?: boolean;
 }
 
-export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory, widgets }: Props) {
+export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory, widgets, locked = false }: Props) {
   const t = useT();
   const trackRef = useRef<HTMLDivElement>(null);
   const [retracted, setRetracted] = useState('');
@@ -38,6 +41,7 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
 
   const start = (e: PointerEvent, def: WidgetDef) => {
     e.preventDefault();
+    if (locked) return; // layout bloccato: i tool non si possono portare sulla tela
     const move = (ev: globalThis.PointerEvent) => setGhost({ def, x: ev.clientX, y: ev.clientY });
     const up = (ev: globalThis.PointerEvent) => {
       window.removeEventListener('pointermove', move);
@@ -67,7 +71,7 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
           );
           return;
         }
-        const ext = tiltExtent(w, h, 3); // margine per la rotazione casuale massima (±3°)
+        const ext = tiltExtent(w, h, MAX_TILT); // margine per la rotazione massima
         // Dentro l'area visibile, poi rispetto al centro della tela.
         onDrop(
           def,
@@ -143,17 +147,17 @@ export function Drawer({ canvasRef, onDrop, style, grouped, category, onCategory
       <div className="drawer-track" ref={trackRef}>
       {tools.map((def) => {
         const { w, h } = def.defaultSize;
-        const common = { key: def.type, 'data-type': def.type, 'aria-label': t(def.label), title: t(def.label), onPointerDown: (e: PointerEvent) => start(e, def) };
+        const common = { key: def.type, 'data-type': def.type, 'aria-label': t(def.label), 'aria-disabled': locked || undefined, title: locked ? t('This space is locked') : t(def.label), onPointerDown: (e: PointerEvent) => start(e, def) };
         if (style === 'slanted') {
           return (
-            <button {...common} className="drawer-item">
+            <button {...common} className={`drawer-item${locked ? ' locked' : ''}`}>
               <span className="slant"><WidgetPreview def={def} scale={Math.min(SLOT_W / w, SLOT_H / h)} /></span>
             </button>
           );
         }
         const sc = Math.min(TUCK_LEN / w, TUCK_THICK / h);
         return (
-          <button {...common} className={`drawer-item${retractedSet.has(def.type) ? ' retracted' : ''}`} style={{ width: h * sc, height: BAR_H }}>
+          <button {...common} className={`drawer-item${retractedSet.has(def.type) ? ' retracted' : ''}${locked ? ' locked' : ''}`} style={{ width: h * sc, height: BAR_H }}>
             <span className="tool" style={{ width: h * sc, height: w * sc, top: BAR_H + PEEK - w * sc }}>
               <span className="tool-rot">
                 <WidgetPreview def={def} scale={sc} />

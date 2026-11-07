@@ -66,7 +66,7 @@ export function groupsOf(ids: string[], links: Link[]): Map<string, string[]> {
  * solo spinti dentro (un gruppo agganciato come un blocco unico) senza toccare il dato salvato: allargando di nuovo
  * tornano dove erano. I widget di un contenitore stanno dentro il suo corpo allo stesso modo.
  */
-export function computeLayout(widgets: WidgetInstance[], links: Link[], view: View, tilt: boolean, containers: ReadonlySet<string>): Map<string, Placed> {
+export function computeLayout(widgets: WidgetInstance[], links: Link[], view: View, tilt: number, containers: ReadonlySet<string>): Map<string, Placed> {
   const byId = new Map(widgets.map((w) => [w.id, w]));
   const hostOf = (w: WidgetInstance) => {
     const p = w.parent ? byId.get(w.parent) : undefined;
@@ -83,9 +83,9 @@ export function computeLayout(widgets: WidgetInstance[], links: Link[], view: Vi
     for (const m of members) done.add(m.id);
     const linked = members.length > 1;
     const boxes = members.map((m) => {
-      const tilted = tilt && !linked && !containers.has(m.id);
+      const tilted = tilt > 0 && !linked && !containers.has(m.id);
       const h = containers.has(m.id) && isCollapsed(m) ? BAR_H : m.h;
-      const ext = tilted ? tiltExtent(m.w, h, m.rot) : { x: 0, y: 0 };
+      const ext = tilted ? tiltExtent(m.w, h, m.rot * tilt) : { x: 0, y: 0 };
       return { m, h, tilted, ext, x: m.x + view.w / 2, y: m.y + view.h / 2 };
     });
     const shift = (lo: number, hi: number, limit: number) => {

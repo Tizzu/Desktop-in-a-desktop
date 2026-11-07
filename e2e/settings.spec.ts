@@ -1,7 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { appData, dragToolTo, dragWidget, openApp, position, readSaved, seed, settled, widgets } from './helpers';
-
-const openSettings = (page: Page) => page.getByRole('button', { name: 'Settings' }).click();
+import { appData, closeSettings, dragToolTo, dragWidget, openApp, openSettings, position, readSaved, seed, settled, widgets } from './helpers';
 const transformOf = (page: Page) => widgets(page).first().evaluate((el) => (el as HTMLElement).style.transform);
 
 test.beforeEach(async ({ page }) => {
@@ -13,17 +11,17 @@ test('inclinazione casuale: si può spegnere e riaccendere ritrovando lo stesso 
   const angle = await transformOf(page);
   expect(angle).toMatch(/rotate\(/);
 
-  await openSettings(page);
-  await page.getByLabel('Random tilt on widgets').uncheck();
+  await openSettings(page, 'Appearance');
+  await page.getByLabel('Tilt', { exact: true }).fill('0');
   await expect.poll(() => transformOf(page)).toBe('');
-  await page.getByLabel('Random tilt on widgets').check();
+  await page.getByLabel('Tilt', { exact: true }).fill('100');
   await expect.poll(() => transformOf(page)).toBe(angle);
 });
 
 test('lancio con inerzia spento: il widget si ferma dove lo lasci', async ({ page }) => {
-  await openSettings(page);
+  await openSettings(page, 'Desk');
   await page.getByLabel('Throw with momentum').uncheck();
-  await openSettings(page);
+  await closeSettings(page);
 
   await dragToolTo(page, 'Sticky note', 300, 300);
   const w = widgets(page).first();
@@ -44,7 +42,7 @@ test('cassetti per categoria: filtrano i tool e si possono spegnere', async ({ p
   await expect(page.locator('.drawer-item[aria-label="Timer"]')).toHaveCount(1);
   await expect(page.locator('.drawer-item[aria-label="Post-it"]')).toHaveCount(0);
 
-  await openSettings(page);
+  await openSettings(page, 'Appearance');
   await page.getByLabel('Drawers by category').uncheck();
   await expect(page.locator('.drawer-cats')).toHaveCount(0);
   await expect(tools()).toHaveCount(all); // spenti: tornano tutti i tool
@@ -52,7 +50,7 @@ test('cassetti per categoria: filtrano i tool e si possono spegnere', async ({ p
 
 test('stile dei cassetti: la scelta resta dopo la ricarica', async ({ page }) => {
   await expect(page.locator('.drawer--tucked')).toHaveCount(1);
-  await openSettings(page);
+  await openSettings(page, 'Appearance');
   await page.getByLabel('Drawer style').selectOption({ label: 'Slanted' });
   await expect(page.locator('.drawer--slanted')).toHaveCount(1);
   await page.waitForTimeout(500);
@@ -61,7 +59,7 @@ test('stile dei cassetti: la scelta resta dopo la ricarica', async ({ page }) =>
 });
 
 test('tema: si applica, si ritrova alla riapertura e c\'è già al primo disegno (niente sfarfallio)', async ({ page }) => {
-  await openSettings(page);
+  await openSettings(page, 'Appearance');
   await page.getByRole('radio', { name: 'Forest' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'forest');
   await page.waitForTimeout(500);
@@ -95,7 +93,7 @@ test('un salvataggio del vecchio formato (v1) si apre e viene aggiornato', async
   await page.waitForTimeout(600);
   const saved = await readSaved(page);
   expect(saved.version).toBe(3);
-  expect(saved.settings).toMatchObject({ tilt: true, physics: true, theme: 'warm', categories: true });
+  expect(saved.settings).toMatchObject({ tilt: 1, physics: true, theme: 'warm', categories: true });
   expect(saved.workspaces[0].widgets[0]).toMatchObject({ rot: 0, state: { text: 'dal passato' } });
 });
 
@@ -104,8 +102,8 @@ test('lingua: inglese di default, si cambia in italiano dalle impostazioni e si 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('.drawer-item[data-type="todo"]')).toHaveAttribute('aria-label', 'To do');
 
-  await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByLabel('Language').selectOption('it');
+  await openSettings(page, 'Language');
+  await page.getByRole('combobox', { name: /Language/ }).selectOption('it');
   await expect(page.locator('html')).toHaveAttribute('lang', 'it');
   await expect(page.locator('.drawer-item[data-type="todo"]')).toHaveAttribute('aria-label', 'Da fare');
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toBeVisible();
@@ -127,7 +125,7 @@ test('impostazioni: il pannello mostra i crediti e il pulsante è ben grande', a
   await openApp(page);
   const button = page.getByRole('button', { name: 'Settings' });
   expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(34);
-  await button.click();
+  await openSettings(page, 'About');
   await expect(page.locator('.credits')).toContainText('Valentino Artizzu');
   await expect(page.locator('.credits a')).toHaveAttribute('href', /github\.com\/Tizzu\/Desktop-in-a-desktop/);
 });
@@ -135,14 +133,16 @@ test('impostazioni: il pannello mostra i crediti e il pulsante è ben grande', a
 test('esporta e importa: i dati si ritrovano dopo una sostituzione', async ({ page }) => {
   await dragToolTo(page, 'Sticky note', 400, 250);
   await widgets(page).first().locator('textarea').fill('da salvare');
-  await openSettings(page);
+  await openSettings(page, 'Data');
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export to file' }).click()]);
   expect(download.suggestedFilename()).toMatch(/^desktop-in-a-desktop-\d{4}-\d{2}-\d{2}\.json$/);
   const file = await download.path();
+  await closeSettings(page);
 
   await widgets(page).first().getByRole('button', { name: 'Remove widget' }).click();
   await expect(widgets(page)).toHaveCount(0);
 
+  await openSettings(page, 'Data');
   page.once('dialog', (d) => void d.accept());
   await page.getByLabel('Backup file').setInputFiles(file);
   await expect(widgets(page)).toHaveCount(1);
@@ -160,15 +160,17 @@ test('esporta come testo: si copia una stringa e la si incolla per ripristinare'
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await dragToolTo(page, 'Sticky note', 400, 250);
   await widgets(page).first().locator('textarea').fill('via chat');
-  await openSettings(page);
+  await openSettings(page, 'Data');
   await page.getByRole('button', { name: 'Copy as text' }).click();
   await expect(page.getByRole('status')).toContainText('Copied');
   const text = await page.evaluate(() => navigator.clipboard.readText());
   expect(text).toMatch(/^DIAD1:[A-Za-z0-9_-]+:END$/);
+  await closeSettings(page);
 
   await widgets(page).first().getByRole('button', { name: 'Remove widget' }).click();
   await expect(widgets(page)).toHaveCount(0);
 
+  await openSettings(page, 'Data');
   await page.getByRole('button', { name: 'Paste from text' }).click();
   // Una chat può spezzare la riga e aggiungere parole intorno: si ritrova lo stesso.
   await page.getByLabel('Backup text').fill(`Ecco il mio desk!\n${text.slice(0, 40)}\n${text.slice(40)}\nciao`);

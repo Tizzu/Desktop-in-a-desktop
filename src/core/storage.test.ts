@@ -29,7 +29,7 @@ describe('storage', () => {
     };
     const m = migrate(v1);
     expect(m.version).toBe(3);
-    expect(m.settings).toEqual({ language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, timerSound: true, seenVersion: '', activeCategory: 'all' });
+    expect(m.settings).toEqual({ language: 'en', tilt: 1, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, timerSound: true, seenVersion: '', privacyKey: 'Ctrl+Shift+h', privacyNotice: 'center', privacyOnLeave: false, privacyIdle: 0, activeCategory: 'all' });
     expect(m.workspaces[0]!.widgets[0]!.rot).toBe(0);
   });
 
@@ -149,7 +149,7 @@ describe('dati rovinati letti dal disco', () => {
 
   it('le impostazioni con valori sconosciuti o di tipo sbagliato tornano al predefinito', () => {
     const d = sanitize({ activeWorkspaceId: 'a', workspaces: [ws([])], settings: { theme: 'inesistente', drawerStyle: 7, activeCategory: 'boh', tilt: 'sì', physics: false } })!;
-    expect(d.settings).toMatchObject({ theme: 'warm', drawerStyle: 'tucked', activeCategory: 'all', tilt: true, physics: false });
+    expect(d.settings).toMatchObject({ theme: 'warm', drawerStyle: 'tucked', activeCategory: 'all', tilt: 1, physics: false });
     expect(sanitize({ activeWorkspaceId: 'a', workspaces: [ws([])], settings: 'rotto' })!.settings.theme).toBe('warm');
   });
 
@@ -191,5 +191,40 @@ describe('widget rimossi e scorciatoia di ricerca', () => {
     expect(migrate({ ...base, settings: {} }).settings.searchKey).toBe('\\');
     expect(migrate({ ...base, settings: { searchKey: 5 } }).settings.searchKey).toBe('\\');
     expect(migrate({ ...base, settings: { searchKey: 'Ctrl+k' } }).settings.searchKey).toBe('Ctrl+k');
+  });
+});
+
+describe('inclinazione, impostazioni per spazio, pin e privacy', () => {
+  const base = (settings: unknown, widgets: unknown[] = [], extra: Record<string, unknown> = {}): any =>
+    ({ version: 3, activeWorkspaceId: 'a', settings, workspaces: [{ id: 'a', name: 'x', order: 0, widgets, ...extra }] });
+  const w = (id: string, extra: Record<string, unknown> = {}) => ({ id, type: 'postit', x: 0, y: 0, w: 10, h: 10, z: 1, rot: 0, state: {}, ...extra });
+
+  it('l\'inclinazione sì/no di prima diventa una quantità', () => {
+    expect(migrate(base({ tilt: true })).settings.tilt).toBe(1);
+    expect(migrate(base({ tilt: false })).settings.tilt).toBe(0);
+    expect(migrate(base({ tilt: 0.4 })).settings.tilt).toBe(0.4);
+    expect(migrate(base({ tilt: 7 })).settings.tilt).toBe(1);
+    expect(migrate(base({ tilt: 'boh' })).settings.tilt).toBe(1);
+    expect(migrate(base({})).settings.tilt).toBe(1);
+  });
+  it('le impostazioni della privacy rotte tornano ai valori di serie', () => {
+    const s = migrate(base({ privacyKey: '', privacyIdle: 7, privacyNotice: 'sì', privacyOnLeave: 3 })).settings;
+    expect(s).toMatchObject({ privacyKey: 'Ctrl+Shift+h', privacyIdle: 0, privacyNotice: 'center', privacyOnLeave: false });
+    expect(migrate(base({ privacyKey: 'Alt+p', privacyIdle: 10, privacyNotice: 'corner', privacyOnLeave: true })).settings)
+      .toMatchObject({ privacyKey: 'Alt+p', privacyIdle: 10, privacyNotice: 'corner', privacyOnLeave: true });
+  });
+  it('l\'avviso della privacy era un sì/no: sì → al centro, no → discreto nell\'angolo', () => {
+    expect(migrate(base({ privacyNotice: true })).settings.privacyNotice).toBe('center');
+    expect(migrate(base({ privacyNotice: false })).settings.privacyNotice).toBe('corner');
+    expect(migrate(base({ privacyNotice: 'boh' })).settings.privacyNotice).toBe('center');
+    expect(migrate(base({})).settings.privacyNotice).toBe('center');
+  });
+  it('impostazioni proprie dello spazio, blocco e pin: si tengono solo se valide', () => {
+    const d = sanitize(base({}, [w('a', { pinned: true }), w('b', { pinned: 'sì' }), w('c')], { overrides: { tilt: 3, searchBar: 'no', altro: 1 }, locked: true }))!;
+    const ws = d.workspaces[0]!;
+    expect(ws.overrides).toEqual({ tilt: 1 });
+    expect(ws.locked).toBe(true);
+    expect(ws.widgets.map((x) => x.pinned)).toEqual([true, undefined, undefined]);
+    expect(sanitize(base({}, [], { overrides: 'rotto', locked: 'sì' }))!.workspaces[0]).toMatchObject({ overrides: undefined, locked: undefined });
   });
 });

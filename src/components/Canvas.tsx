@@ -2,6 +2,7 @@ import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, u
 import type { Action } from '../core/store';
 import type { Link, Settings, Workspace, WidgetInstance } from '../core/types';
 import { bounceOff, intersects, type Rect } from '../core/physics';
+import { MAX_TILT, clampTilt, effectiveSearchBar, effectiveTilt, pinnedIds } from '../core/space';
 import { BAR_H, brokenLinks, computeLayout, contact, groupsOf, isCollapsed, nearPairs, snapDelta, touching, type Placed, type View } from '../core/layout';
 import { getWidget } from '../widgets';
 import { useT } from '../core/i18n';
@@ -26,6 +27,10 @@ interface Ctx {
   view: View;
   settings: Settings;
   containers: ReadonlySet<string>;
+  /** Quantità di inclinazione dello spazio (0..1). */
+  tilt: number;
+  /** Widget fissati (o tutti, se lo spazio è bloccato): non si spostano né si ridimensionano. */
+  pinned: ReadonlySet<string>;
 }
 
 interface Flight { raf: number; ids: string[] }
@@ -117,7 +122,7 @@ function launch(members: Member[], vx0: number, vy0: number, canvas: HTMLElement
 
 const asMember = (id: string, p: Placed): Member => ({ id, x: p.x, y: p.y, w: p.w, h: p.h, ext: p.ext });
 
-function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatch<Action>, mode: 'move' | 'resize', ctx: Ctx) {
+function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatch<Action>, mode: 'move' | 'resize' | 'rotate', ctx: Ctx) {
   e.preventDefault();
   // preventDefault blocca il cambio di focus: lo togliamo noi (es. dalla barra di ricerca fissa, che così torna sotto i widget).
   if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -129,7 +134,30 @@ function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatc
   if (!own) return;
   const sx = e.clientX, sy = e.clientY;
 
+  // Maniglia di inclinazione: l'angolo segue il puntatore attorno al centro del widget, entro il limite.
+  if (mode === 'rotate') {
+    if (ctx.pinned.has(widget.id) || ctx.tilt <= 0) return;
+    // Il centro del widget (a schermo) non cambia con la rotazione.
+    const cb = canvas.getBoundingClientRect();
+    const cx = cb.left + own.x + own.w / 2, cy = cb.top + own.y + own.h / 2;
+    const a0 = Math.atan2(sy - cy, sx - cx);
+    const move = (ev: globalThis.PointerEvent) => {
+      let d = ((Math.atan2(ev.clientY - cy, ev.clientX - cx) - a0) * 180) / Math.PI;
+      d = ((d + 540) % 360) - 180; // da −180° a 180°: passando dietro il centro l'angolo non salta
+      // L'angolo a schermo è rot × quantità: si divide per la quantità, così il widget segue il puntatore.
+      dispatch({ type: 'updateWidget', id: widget.id, patch: { rot: Math.round(clampTilt(widget.rot + d / ctx.tilt) * 100) / 100 } });
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    return;
+  }
+
   if (mode === 'resize') {
+    if (ctx.pinned.has(widget.id)) return;
     const host = widget.parent && own.child ? layout.get(widget.parent) : undefined;
     // Un widget dentro un contenitore non esce dal suo corpo; sulla tela, dalla finestra.
     const maxW = host ? host.x + host.w - own.x : view.w - own.x - own.ext.x;
@@ -169,11 +197,13 @@ function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatc
 
   const wasChild = own.child;
   const ids = wasChild ? [widget.id] : groupsOf([...layout].filter(([, p]) => !p.child).map(([id]) => id), ctx.links).get(widget.id)!;
+  if (ids.some((id) => ctx.pinned.has(id))) return; // se uno del gruppo è fissato, resta fermo tutto
   const members = ids.map((id) => asMember(id, layout.get(id)!));
   const single = members.length === 1 && !ctx.containers.has(widget.id);
   const { lo, hi } = bounds(members, view);
   // Candidati a cui agganciarsi: i widget liberi sulla tela che non si stanno muovendo.
-  const others = [...layout].filter(([id, p]) => !p.child && !ids.includes(id)).map(([id, p]) => ({ id, x: p.x, y: p.y, w: p.w, h: p.h }));
+  // I widget fissati non fanno da bersaglio: ci si agganciasse, il nuovo arrivato resterebbe bloccato con loro.
+  const others = [...layout].filter(([id, p]) => !p.child && !ids.includes(id) && !ctx.pinned.has(id)).map(([id, p]) => ({ id, x: p.x, y: p.y, w: p.w, h: p.h }));
   const excluded = wasChild ? new Set<string>() : nearPairs(members, others);
   const samples: { t: number; x: number; y: number }[] = [];
   let off = { x: 0, y: 0 };
@@ -290,12 +320,16 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
 
   const containers = useMemo(() => new Set(workspace.widgets.filter((w) => getWidget(w.type)?.container).map((w) => w.id)), [workspace.widgets]);
   const links = workspace.links ?? [];
+  // Inclinazione e barra di ricerca possono essere decise dallo spazio; altrimenti valgono le impostazioni.
+  const tilt = effectiveTilt(settings, workspace);
+  const searchBar = effectiveSearchBar(settings, workspace);
+  const pinned = useMemo(() => pinnedIds(workspace), [workspace.widgets, workspace.locked]); // eslint-disable-line react-hooks/exhaustive-deps
   const layout = useMemo(
-    () => computeLayout(workspace.widgets, links, view, settings.tilt, containers),
+    () => computeLayout(workspace.widgets, links, view, tilt, containers),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [workspace.widgets, workspace.links, view, settings.tilt, containers],
+    [workspace.widgets, workspace.links, view, tilt, containers],
   );
-  const ctx: Ctx = { widgets: workspace.widgets, links, layout, view, settings, containers };
+  const ctx: Ctx = { widgets: workspace.widgets, links, layout, view, settings, containers, tilt, pinned };
 
   // Confronta i riquadri a schermo (tengono conto di rotazione e scorrimento).
   const check = useCallback(() => {
@@ -317,11 +351,11 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
     const ro = new ResizeObserver(check);
     ro.observe(canvas);
     return () => ro.disconnect();
-  }, [check, settings.searchBar]);
+  }, [check, searchBar]);
 
   return (
     <div className="canvas" ref={setRefs}>
-      {settings.searchBar && (
+      {searchBar && (
         // Mentre si scrive la barra passa davanti ai widget; coperta e inattiva diventa trasparente.
         <div className={`fixed-search-anchor${active ? ' raised' : ''}`}>
           <div ref={barRef} className={`fixed-search${covered && !active ? ' covered' : ''}`}>
@@ -334,6 +368,7 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
         const p = layout.get(w.id);
         if (!def || !p) return null;
         const shut = !!def.container && isCollapsed(w);
+        const pin = pinned.has(w.id);
         const inside = def.container ? workspace.widgets.filter((c) => c.parent === w.id).length : 0;
         const label = (def.container && (w.state as { label?: string } | null)?.label) || t(def.label);
         const rename = (name: string) => {
@@ -343,14 +378,14 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
         return (
           <section
             key={w.id}
-            className={`widget${p.child ? ' in-container' : ''}${shut ? ' collapsed' : ''}`}
+            className={`widget${p.child ? ' in-container' : ''}${shut ? ' collapsed' : ''}${pin ? ' pinned' : ''}`}
             data-id={w.id}
             data-container={def.container ? '' : undefined}
             data-empty={def.container && !shut && !inside ? '' : undefined}
             style={{
               left: p.x, top: p.y, width: p.w, height: p.h, zIndex: p.z,
               ...(def.container ? { '--hint': JSON.stringify(t('Drop widgets here')) } : {}),
-              transform: p.tilted ? `rotate(${w.rot}deg)` : undefined,
+              transform: p.tilted ? `rotate(${w.rot * tilt}deg)` : undefined,
             }}
             onPointerDown={() => dispatch({ type: 'bringToFront', id: w.id })}
           >
@@ -394,11 +429,21 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
                 >{shut ? '▸' : '▾'}</button>
               )}
               <button
+                className={`icon-btn pin-btn${pin ? ' on' : ''}`}
+                aria-label={pin ? t('Unpin widget') : t('Pin widget')}
+                aria-pressed={pin}
+                title={workspace.locked ? t('This space is locked') : pin ? t('Unpin widget') : t('Pin widget')}
+                disabled={workspace.locked === true}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => dispatch({ type: 'updateWidget', id: w.id, patch: { pinned: w.pinned ? undefined : true } })}
+              >📌</button>
+              <button
                 className="icon-btn"
                 aria-label={t('Remove widget')}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => {
-                  // I widget che tengono traccia dell'utente (diario, abitudini…) chiedono conferma se hanno già dati.
+                  // Un widget fissato, o che tiene traccia dell'utente (diario, abitudini…) con dati dentro, chiede conferma.
+                  if (pin && !confirm(t('This widget is pinned. Remove it anyway?'))) return;
                   if (def.hasData?.(w.state) && !confirm(t('This widget holds your entries. Remove it anyway?'))) return;
                   dispatch({ type: 'removeWidget', id: w.id });
                 }}
@@ -418,7 +463,27 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
                 />
               </ErrorBoundary>
             </div>
-            <div className="resize-handle" onPointerDown={(e) => startGesture(e, w, dispatch, 'resize', ctx)} />
+            {!pin && <div className="resize-handle" onPointerDown={(e) => startGesture(e, w, dispatch, 'resize', ctx)} />}
+            {/* Linguetta per inclinare, speculare a quella del ridimensionamento: si afferra e si trascina. */}
+            {!pin && p.tilted && (
+              <div
+                className="rot-handle"
+                role="slider"
+                tabIndex={0}
+                aria-label={t('Tilt widget')}
+                title={t('Tilt widget')}
+                aria-valuemin={-MAX_TILT}
+                aria-valuemax={MAX_TILT}
+                aria-valuenow={w.rot}
+                onPointerDown={(e) => startGesture(e, w, dispatch, 'rotate', ctx)}
+                onKeyDown={(e) => {
+                  const step = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 0.5 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -0.5 : 0;
+                  if (!step) return;
+                  e.preventDefault();
+                  dispatch({ type: 'updateWidget', id: w.id, patch: { rot: clampTilt(w.rot + step) } });
+                }}
+              />
+            )}
           </section>
         );
       })}

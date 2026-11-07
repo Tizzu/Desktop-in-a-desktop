@@ -3,9 +3,20 @@ export interface Release { version: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.5.0',
+    items: [
+      'A new Settings window with categories',
+      'Tilt is now a slider, and each space can set its own tilt and search bar from the ⚙ next to its name',
+      'Tilt a widget by hand with the small tab at its bottom-left corner, or shuffle all the angles of a space',
+      'Pin widgets to keep them in place and size, or lock the layout of a whole space (nothing moves, nothing gets added)',
+      'Privacy mode: blur the whole page with one key or the eye button, with a notice in the centre or a discreet one in the corner, and optional automatic hiding',
+      'The changelog shows only what is new since your last visit; older versions are one click away',
+    ],
+  },
+  {
     version: '0.4.0',
     items: [
-      'Changelog like this one after each update; click the version in Settings to reopen it',
+      'Changelog like this one after each update; reopen it from Settings, under About',
       'Focus timer is now customisable: minutes for each phase, number of sessions, and optional auto-start',
       'Calm bell sounds when timers end (can be turned off in Settings)',
       'Board cards can be dragged between columns and reordered',

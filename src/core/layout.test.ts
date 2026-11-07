@@ -29,18 +29,18 @@ describe('gruppi', () => {
 
 describe('disposizione rispetto al centro', () => {
   it('le coordinate sono rispetto al centro della tela', () => {
-    const l = computeLayout([w('a', -100, -50)], [], view, false, none);
+    const l = computeLayout([w('a', -100, -50)], [], view, 0, none);
     expect(l.get('a')).toMatchObject({ x: 400, y: 250 });
   });
   it('rimpicciolendo la finestra i widget fuori vista vengono spinti dentro, senza toccare il dato', () => {
     const a = w('a', 300, 100);
-    expect(computeLayout([a], [], { w: 1000, h: 600 }, false, none).get('a')!.x).toBe(800);
-    expect(computeLayout([a], [], { w: 600, h: 600 }, false, none).get('a')!.x).toBe(400); // 600 - 200
+    expect(computeLayout([a], [], { w: 1000, h: 600 }, 0, none).get('a')!.x).toBe(800);
+    expect(computeLayout([a], [], { w: 600, h: 600 }, 0, none).get('a')!.x).toBe(400); // 600 - 200
     expect(a.x).toBe(300);
-    expect(computeLayout([a], [], { w: 100, h: 600 }, false, none).get('a')!.x).toBe(0); // più largo della finestra: a sinistra
+    expect(computeLayout([a], [], { w: 100, h: 600 }, 0, none).get('a')!.x).toBe(0); // più largo della finestra: a sinistra
   });
   it('un gruppo agganciato viene spinto come un blocco', () => {
-    const l = computeLayout([w('a', 100, 0), w('b', 300, 0)], [['a', 'b']], { w: 800, h: 600 }, true, none);
+    const l = computeLayout([w('a', 100, 0), w('b', 300, 0)], [['a', 'b']], { w: 800, h: 600 }, 1, none);
     expect(l.get('b')!.x - l.get('a')!.x).toBe(200);
     expect(l.get('b')!.x + 200).toBe(800);
     expect(l.get('a')!.tilted).toBe(false); // agganciati: dritti
@@ -49,7 +49,7 @@ describe('disposizione rispetto al centro', () => {
     const box = w('box', -100, -100, { w: 300, h: 230 });
     const inside = w('i', 50, 20, { parent: 'box' });
     const out = w('o', 5000, 5000, { parent: 'box' });
-    const l = computeLayout([box, inside, out], [], view, true, new Set(['box']));
+    const l = computeLayout([box, inside, out], [], view, 1, new Set(['box']));
     const b = l.get('box')!;
     expect(l.get('i')).toMatchObject({ x: b.x + 50, y: b.y + BAR_H + 20, child: true });
     expect(l.get('o')!.x).toBe(b.x + 100); // 300 - 200
@@ -58,11 +58,11 @@ describe('disposizione rispetto al centro', () => {
   });
   it('ordine di sovrapposizione: i figli subito sopra il contenitore', () => {
     const ws = [w('box', 0, 0, { z: 1 }), w('c', 0, 0, { z: 9, parent: 'box' }), w('top', 0, 0, { z: 2 })];
-    const l = computeLayout(ws, [], view, false, new Set(['box']));
+    const l = computeLayout(ws, [], view, 0, new Set(['box']));
     expect([l.get('box')!.z, l.get('c')!.z, l.get('top')!.z]).toEqual([1, 2, 3]);
   });
   it('un parent che non è un contenitore viene ignorato', () => {
-    const l = computeLayout([w('a', 0, 0), w('b', 0, 0, { parent: 'a' })], [], view, false, none);
+    const l = computeLayout([w('a', 0, 0), w('b', 0, 0, { parent: 'a' })], [], view, 0, none);
     expect(l.get('b')!.child).toBe(false);
   });
 });
@@ -99,9 +99,20 @@ describe('aggancio', () => {
 describe('contenitore chiuso', () => {
   it('si riduce alla sola barra e nasconde i suoi widget', () => {
     const box = w('box', 0, 0, { w: 300, h: 230, state: { collapsed: true } });
-    const l = computeLayout([box, w('i', 10, 10, { parent: 'box' })], [], view, false, new Set(['box']));
+    const l = computeLayout([box, w('i', 10, 10, { parent: 'box' })], [], view, 0, new Set(['box']));
     expect(l.get('box')!.h).toBe(BAR_H);
     expect(l.has('i')).toBe(false);
-    expect(computeLayout([{ ...box, state: {} }, w('i', 10, 10, { parent: 'box' })], [], view, false, new Set(['box'])).get('box')!.h).toBe(230);
+    expect(computeLayout([{ ...box, state: {} }, w('i', 10, 10, { parent: 'box' })], [], view, 0, new Set(['box'])).get('box')!.h).toBe(230);
+  });
+});
+
+describe('quantità di inclinazione', () => {
+  it('a 0 i widget sono dritti; altrimenti il margine di sporgenza cresce con la quantità', () => {
+    const a = w('a', 0, 0, { rot: 3 });
+    expect(computeLayout([a], [], view, 0, none).get('a')!.tilted).toBe(false);
+    const half = computeLayout([a], [], view, 0.5, none).get('a')!;
+    const full = computeLayout([a], [], view, 1, none).get('a')!;
+    expect(half.tilted && full.tilted).toBe(true);
+    expect(full.ext.x).toBeGreaterThan(half.ext.x);
   });
 });

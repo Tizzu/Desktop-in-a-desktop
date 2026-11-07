@@ -1,6 +1,9 @@
 /** Scorciatoia predefinita per portare il focus sulla barra di ricerca fissa. */
 export const DEFAULT_SHORTCUT = '\\';
 
+/** Scorciatoia predefinita della modalità privacy: con i modificatori, così scatta anche mentre si scrive. */
+export const DEFAULT_PRIVACY_KEY = 'Ctrl+Shift+h';
+
 type KeyInfo = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'altKey' | 'shiftKey' | 'metaKey'>;
 
 const MODIFIER_KEYS = ['Control', 'Shift', 'Alt', 'AltGraph', 'Meta', 'CapsLock', 'Dead', 'Unidentified'];
@@ -24,4 +27,4 @@ export const matchesShortcut = (shortcut: string, e: KeyInfo) => eventToShortcut
 export const shortcutLabel = (shortcut: string) => shortcut.replace(/[a-z]$/, (c) => c.toUpperCase());
 
 /** Una scorciatoia letta dai dati salvati: testo non vuoto e ragionevole, altrimenti quella predefinita. */
-export const validShortcut = (v: unknown): string => (typeof v === 'string' && v.length > 0 && v.length <= 24 ? v : DEFAULT_SHORTCUT);
+export const validShortcut = (v: unknown, fallback = DEFAULT_SHORTCUT): string => (typeof v === 'string' && v.length > 0 && v.length <= 24 ? v : fallback);

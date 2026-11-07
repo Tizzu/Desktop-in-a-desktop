@@ -1,5 +1,5 @@
 import { BAR_H } from './layout';
-import type { AppData, Link, Settings, WidgetInstance, Workspace } from './types';
+import type { AppData, Link, Settings, SpaceOverrides, WidgetInstance, Workspace } from './types';
 
 export type Action =
   | { type: 'load'; data: AppData }
@@ -18,7 +18,9 @@ export type Action =
   | { type: 'removeWidget'; ws?: string; id: string }
   | { type: 'link'; ws?: string; pairs: Link[] }
   | { type: 'unlink'; ws?: string; pairs: Link[] }
-  | { type: 'bringToFront'; ws?: string; id: string };
+  | { type: 'bringToFront'; ws?: string; id: string }
+  // Impostazioni proprie di uno spazio: `null` toglie quella dello spazio e torna a valere la globale.
+  | { type: 'setSpace'; ws?: string; patch: { tilt?: number | null; searchBar?: boolean | null; locked?: boolean } };
 
 const mapWorkspace = (s: AppData, ws: string | undefined, fn: (w: Workspace) => Workspace): AppData => {
   const target = ws ?? s.activeWorkspaceId;
@@ -99,6 +101,19 @@ export function reducer(s: AppData, a: Action): AppData {
       });
     case 'unlink':
       return mapWorkspace(s, a.ws, (w) => ({ ...w, links: (w.links ?? []).filter((l) => !a.pairs.some((p) => sameLink(l, p))) }));
+    case 'setSpace':
+      return mapWorkspace(s, a.ws, (w) => {
+        const overrides: SpaceOverrides = { ...w.overrides };
+        if ('tilt' in a.patch) {
+          if (a.patch.tilt == null) delete overrides.tilt;
+          else overrides.tilt = Math.max(0, Math.min(1, a.patch.tilt));
+        }
+        if ('searchBar' in a.patch) {
+          if (a.patch.searchBar == null) delete overrides.searchBar;
+          else overrides.searchBar = a.patch.searchBar;
+        }
+        return { ...w, overrides: Object.keys(overrides).length ? overrides : undefined, locked: a.patch.locked ?? w.locked };
+      });
     case 'bringToFront':
       return mapWorkspace(s, a.ws, (w) => {
         const target = w.widgets.find((x) => x.id === a.id);

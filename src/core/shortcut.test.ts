@@ -32,3 +32,11 @@ describe('scorciatoie', () => {
     expect(validShortcut('Ctrl+k')).toBe('Ctrl+k');
   });
 });
+
+describe('scorciatoia con valore di ripiego', () => {
+  it('usa il ripiego indicato quando il dato non è valido', () => {
+    expect(validShortcut('', 'Ctrl+Shift+h')).toBe('Ctrl+Shift+h');
+    expect(validShortcut(undefined, 'Alt+p')).toBe('Alt+p');
+    expect(validShortcut('Alt+x', 'Alt+p')).toBe('Alt+x');
+  });
+});

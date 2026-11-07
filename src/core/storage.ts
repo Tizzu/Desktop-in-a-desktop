@@ -1,8 +1,8 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { THEMES } from './themes';
 import { isLang } from './i18n';
-import { validShortcut } from './shortcut';
-import { CATEGORY_IDS, DEFAULT_SETTINGS, SCHEMA_VERSION, type AppData, type Settings } from './types';
+import { DEFAULT_PRIVACY_KEY, validShortcut } from './shortcut';
+import { CATEGORY_IDS, DEFAULT_SETTINGS, PRIVACY_IDLE_MINUTES, SCHEMA_VERSION, type AppData, type Settings, type SpaceOverrides } from './types';
 
 export interface Storage {
   load(): Promise<AppData | undefined>;
@@ -43,12 +43,30 @@ function migrateSettings(raw: unknown): Settings {
   if (merged.drawerStyle !== 'tucked' && merged.drawerStyle !== 'slanted') merged.drawerStyle = DEFAULT_SETTINGS.drawerStyle;
   if (merged.activeCategory !== 'all' && !CATEGORY_IDS.includes(merged.activeCategory)) merged.activeCategory = 'all';
   merged.searchKey = validShortcut(merged.searchKey);
+  merged.privacyKey = validShortcut(merged.privacyKey, DEFAULT_PRIVACY_KEY);
+  if (!PRIVACY_IDLE_MINUTES.includes(merged.privacyIdle)) merged.privacyIdle = DEFAULT_SETTINGS.privacyIdle;
+  // L'avviso era un sì/no (no = velo vuoto): ora ce n'è sempre uno, al centro o discreto in un angolo.
+  const notice: unknown = merged.privacyNotice;
+  merged.privacyNotice = notice === 'corner' || notice === false ? 'corner' : 'center';
+  // L'inclinazione era un sì/no, ora è una quantità da 0 a 1.
+  const tilt: unknown = merged.tilt;
+  merged.tilt = typeof tilt === 'boolean' ? (tilt ? 1 : 0) : isNum(tilt) ? Math.max(0, Math.min(1, tilt)) : DEFAULT_SETTINGS.tilt;
   if (typeof merged.seenVersion !== 'string') merged.seenVersion = DEFAULT_SETTINGS.seenVersion;
-  for (const k of ['tilt', 'physics', 'categories', 'searchBar', 'tourDone', 'timerSound'] as const) if (typeof merged[k] !== 'boolean') merged[k] = DEFAULT_SETTINGS[k];
+  for (const k of ['physics', 'categories', 'searchBar', 'tourDone', 'timerSound', 'privacyOnLeave'] as const) if (typeof merged[k] !== 'boolean') merged[k] = DEFAULT_SETTINGS[k];
   return merged;
 }
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/** Impostazioni proprie di uno spazio: tiene solo quelle valide, o niente. */
+function cleanOverrides(raw: unknown): SpaceOverrides | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const out: SpaceOverrides = {};
+  if (isNum(r.tilt)) out.tilt = Math.max(0, Math.min(1, r.tilt));
+  if (typeof r.searchBar === 'boolean') out.searchBar = r.searchBar;
+  return Object.keys(out).length ? out : undefined;
+}
 
 /**
  * Ripulisce i dati letti dal disco: scarta ciò che non è utilizzabile (spazi o widget senza id, coordinate non
@@ -65,9 +83,11 @@ export function sanitize(raw: unknown): AppData | undefined {
       name: typeof w.name === 'string' ? w.name : `Space ${i + 1}`,
       order: isNum(w.order) ? w.order : i,
       links: w.links,
+      overrides: cleanOverrides(w.overrides),
+      locked: w.locked === true ? true : undefined,
       widgets: (Array.isArray(w.widgets) ? w.widgets : [])
         .filter((x) => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.type === 'string' && isNum(x.x) && isNum(x.y) && isNum(x.w) && isNum(x.h))
-        .map((x) => ({ ...x, z: isNum(x.z) ? x.z : 1 })),
+        .map((x) => ({ ...x, z: isNum(x.z) ? x.z : 1, pinned: x.pinned === true ? true : undefined })),
     }));
   if (workspaces.length === 0) return undefined;
   const activeWorkspaceId = workspaces.some((w) => w.id === d.activeWorkspaceId) ? d.activeWorkspaceId! : workspaces[0]!.id;

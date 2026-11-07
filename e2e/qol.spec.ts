@@ -1,16 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
-import { addWidget, appData, dragToolTo, openApp, seed, widgets } from './helpers';
-
-const openSettings = (page: Page) => page.getByRole('button', { name: 'Settings' }).click();
+import { addWidget, appData, closeSettings, dragToolTo, openApp, openSettings, seed, widgets } from './helpers';
 
 test('scorciatoia di ricerca: si sceglie dalle impostazioni e sostituisce quella predefinita', async ({ page }) => {
   await openApp(page);
-  await openSettings(page);
+  await openSettings(page, 'Desk');
   await page.getByLabel('Search bar in the centre').check();
   await page.getByRole('button', { name: '\\', exact: true }).click();
   await page.keyboard.press('Control+k');
   await expect(page.getByRole('button', { name: 'Ctrl+K' })).toBeVisible();
-  await openSettings(page); // chiude il pannello
+  await closeSettings(page);
 
   const input = page.locator('.fixed-search input');
   await page.keyboard.press('Backslash');
@@ -21,7 +19,7 @@ test('scorciatoia di ricerca: si sceglie dalle impostazioni e sostituisce quella
   await page.keyboard.press('Escape');
 
   // Backspace nel selettore ripristina quella predefinita.
-  await openSettings(page);
+  await openSettings(page, 'Desk');
   await page.getByRole('button', { name: 'Ctrl+K' }).click();
   await page.keyboard.press('Backspace');
   await expect(page.getByRole('button', { name: '\\', exact: true })).toBeVisible();
@@ -193,7 +191,7 @@ test.describe('visita guidata', () => {
     await expect(tour(page)).toHaveCount(0);
 
     // Si rivede dalle impostazioni, e Esc la chiude.
-    await openSettings(page);
+    await openSettings(page, 'About');
     await page.getByRole('button', { name: 'Quick tour' }).click();
     await expect(tour(page)).toBeVisible();
     await page.keyboard.press('Escape');
@@ -499,9 +497,9 @@ test.describe('suoni dei timer', () => {
 
     await w.getByRole('button', { name: 'Restart' }).click();
     const before = await countBells(page);
-    await openSettings(page);
+    await openSettings(page, 'Sounds');
     await page.getByLabel('Timer sounds').uncheck();
-    await openSettings(page);
+    await closeSettings(page);
     await w.getByRole('button', { name: 'Start' }).click();
     await page.clock.fastForward(5 * 60_000 + 1000);
     await expect(w.locator('.timer-time.done')).toBeVisible();
@@ -526,8 +524,8 @@ test.describe('novità della versione', () => {
     await page.locator('.drawer-item').first().waitFor();
     await expect(dialog(page)).toHaveCount(0); // mai più, fino al prossimo aggiornamento
 
-    await openSettings(page);
-    await page.getByRole('button', { name: /^v\d+\.\d+\.\d+$/ }).click();
+    await openSettings(page, 'About');
+    await page.getByRole('button', { name: 'What\'s new', exact: true }).click();
     await expect(dialog(page)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(dialog(page)).toHaveCount(0);

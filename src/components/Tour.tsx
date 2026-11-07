@@ -74,8 +74,8 @@ export function Tour({ onClose }: Props) {
       body: t('The Container (under Layout) holds other widgets: drop them inside, take them out whenever you like. Rename it with the pencil, and close it with the arrow to hide everything inside.'),
       art: <Box />,
     },
-    { id: 'spaces', target: '.tabs', title: t('Spaces'), body: t('Each space is a separate desk, like browser tabs. Add one with the plus, double-click a name to rename it.') },
-    { id: 'settings', target: '.settings-btn', title: t('Make it yours'), body: t('Colours, tilt, momentum, the search bar and its shortcut, language… and Export / Import to back up or share your desk, even as a text you can paste into a chat.') },
+    { id: 'spaces', target: '.tabs', title: t('Spaces'), body: t('Each space is a separate desk, like browser tabs. Add one with the plus, double-click a name to rename it, and use the ⚙ next to the name for that space\'s own options.') },
+    { id: 'settings', target: '.settings-btn', title: t('Make it yours'), body: t('Colours, tilt, the search bar and its shortcut, privacy mode, language… and Export / Import to back up or share your desk, even as a text you can paste into a chat.') },
     { id: 'done', title: t('That\'s it!'), body: t('You can replay this tour any time from Settings → Quick tour. Enjoy your desk.') },
   ];
   const step = steps[i]!;

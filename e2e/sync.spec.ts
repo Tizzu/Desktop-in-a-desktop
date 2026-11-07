@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { dragToolTo, dragWidget, openApp, position, settled, widgets } from './helpers';
+import { closeSettings, dragToolTo, dragWidget, openApp, openSettings, position, settled, widgets } from './helpers';
 
 test('due schede aperte restano allineate', async ({ context }) => {
   const a = await context.newPage();
@@ -65,9 +65,10 @@ test('le impostazioni condivise si propagano, quelle locali no', async ({ contex
   const b = await context.newPage();
   await openApp(b);
 
-  await a.getByRole('button', { name: 'Settings' }).click();
+  await openSettings(a, 'Appearance');
   await a.getByRole('radio', { name: 'Sea' }).click();
   await expect(b.locator('html')).toHaveAttribute('data-theme', 'sea');
+  await closeSettings(a);
 
   await a.getByRole('tab', { name: 'Time' }).click(); // cassetto aperto: solo in questa scheda
   await expect(a.locator('.cat.on')).toHaveAttribute('title', 'Time');

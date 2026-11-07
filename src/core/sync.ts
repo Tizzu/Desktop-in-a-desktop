@@ -14,6 +14,7 @@ export function prepare(a: Action, s: AppData): Action {
     case 'removeWidget':
     case 'link':
     case 'unlink':
+    case 'setSpace':
     case 'bringToFront':
       return { ...a, ws: a.ws ?? s.activeWorkspaceId };
     default:

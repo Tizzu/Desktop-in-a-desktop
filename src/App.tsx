@@ -5,10 +5,14 @@ import { Drawer } from './components/Drawer';
 import { SettingsMenu } from './components/SettingsMenu';
 import { Tabs } from './components/Tabs';
 import { Changelog } from './components/Changelog';
+import { EyeButton } from './components/EyeButton';
+import { PrivacyVeil } from './components/PrivacyVeil';
 import { Tour } from './components/Tour';
 import { LangContext } from './core/i18n';
 import { createAutosaver, createDefaultData, createIdbStorage, readBackup } from './core/storage';
 import { reducer, type Action } from './core/store';
+import { randomTilt } from './core/space';
+import { usePrivacy } from './core/usePrivacy';
 import { setTimerSound } from './core/sound';
 import { appVersion, compareVersions } from './core/version';
 import { createSync, mergeRemoteState, prepare, toShared, type Sync } from './core/sync';
@@ -21,6 +25,7 @@ export function App() {
   const [tour, setTour] = useState(false);
   const [log, setLog] = useState(false); // novità della versione
   const firstRun = useRef(false);
+  const { hidden, setHidden } = usePrivacy(data.settings, ready);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const dataRef = useRef(data);
@@ -123,7 +128,7 @@ export function App() {
 
   return (
     <LangContext.Provider value={language}>
-    <div className="shell">
+    <div className="shell" inert={hidden}>
       <Drawer
         canvasRef={canvasRef}
         widgets={active.widgets}
@@ -131,20 +136,23 @@ export function App() {
         grouped={data.settings.categories}
         category={data.settings.activeCategory}
         onCategory={(activeCategory) => dispatch({ type: 'setSettings', patch: { activeCategory } })}
+        locked={active.locked === true}
         onDrop={(def, x, y, parent) =>
-          dispatch({
+          !active.locked && dispatch({
             type: 'addWidget',
-            widget: { id: crypto.randomUUID(), type: def.type, x, y, parent, ...def.defaultSize, rot: Math.random() * 6 - 3, state: def.initialState() },
+            widget: { id: crypto.randomUUID(), type: def.type, x, y, parent, ...def.defaultSize, rot: randomTilt(), state: def.initialState() },
           })
         }
       />
       <Canvas ref={canvasRef} workspace={active} settings={data.settings} dispatch={dispatch} />
       <div className="bottom-bar">
         <Tabs data={data} dispatch={dispatch} />
-        <SettingsMenu data={data} dispatch={dispatch} onTour={() => setTour(true)} onChangelog={() => setLog(true)} />
+        <EyeButton shortcut={data.settings.privacyKey} onClick={() => setHidden(true)} />
+        <SettingsMenu data={data} dispatch={dispatch} onTour={() => setTour(true)} onChangelog={() => setLog(true)} onHide={() => setHidden(true)} />
       </div>
       {log && (
         <Changelog
+          since={data.settings.seenVersion}
           onClose={() => {
             setLog(false);
             if (data.settings.seenVersion !== appVersion()) dispatch({ type: 'setSettings', patch: { seenVersion: appVersion() } });
@@ -160,6 +168,7 @@ export function App() {
         />
       )}
     </div>
+    {hidden && <PrivacyVeil notice={data.settings.privacyNotice} shortcut={data.settings.privacyKey} onShow={() => setHidden(false)} />}
     </LangContext.Provider>
   );
 }

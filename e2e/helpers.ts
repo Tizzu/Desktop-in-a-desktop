@@ -3,6 +3,18 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export const widgets = (page: Page) => page.locator('.canvas .widget');
 
+/** Apre le impostazioni (una finestra sopra la pagina), sulla categoria indicata. */
+export async function openSettings(page: Page, category?: string) {
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  if (category) await page.getByRole('tab', { name: category, exact: true }).click();
+}
+
+/** Chiude le impostazioni: finché sono aperte coprono la pagina. */
+export async function closeSettings(page: Page) {
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Settings', exact: true })).toHaveCount(0);
+}
+
 /** Chiude la visita guidata del primo avvio e le novità di una versione, se ci sono: altrimenti coprono la pagina. */
 export async function dismissTour(page: Page, opts: { keepChangelog?: boolean } = {}) {
   const skip = page.getByRole('button', { name: 'Skip tour' });
@@ -71,7 +83,7 @@ export async function settled(w: Locator) {
 // Le novità dell'ultima versione si mostrano solo a chi aggiorna: i dati di prova partono già "visti".
 const VERSION = JSON.parse(fs.readFileSync('package.json', 'utf8')).version as string;
 
-export const DEFAULT_SETTINGS = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, timerSound: true, seenVersion: VERSION, activeCategory: 'all' };
+export const DEFAULT_SETTINGS = { language: 'en', tilt: true, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, timerSound: true, seenVersion: VERSION, privacyKey: 'Ctrl+Shift+h', privacyNotice: 'center', privacyOnLeave: false, privacyIdle: 0, activeCategory: 'all' };
 
 export function appData(widgetList: unknown[], settings: Record<string, unknown> = {}) {
   return {

@@ -1,5 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test';
-import { dragToolTo, dragWidget, openApp, position, settled, widgets } from './helpers';
+import { closeSettings, dragToolTo, dragWidget, openApp, openSettings, position, settled, widgets } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await openApp(page);
@@ -101,9 +101,9 @@ test('un widget lanciato continua a muoversi e resta dentro i bordi', async ({ p
 });
 
 test('barra di ricerca fissa: coperta diventa trasparente e "\\" la porta davanti', async ({ page }) => {
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await openSettings(page, 'Desk');
   await page.getByLabel('Search bar in the centre').check();
-  await page.getByRole('button', { name: 'Settings' }).click();
+  await closeSettings(page);
 
   const bar = page.locator('.fixed-search');
   await expect(bar).toBeVisible();

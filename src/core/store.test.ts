@@ -107,3 +107,33 @@ describe('importazione', () => {
     expect(reducer(createDefaultData(), { type: 'import', data: incoming }).activeWorkspaceId).toBe(incoming.activeWorkspaceId);
   });
 });
+
+describe('impostazioni di uno spazio', () => {
+  const ws = (s: ReturnType<typeof createDefaultData>) => s.workspaces[0]!;
+  it('imposta e toglie l\'inclinazione e la barra di ricerca propri dello spazio', () => {
+    let s = reducer(createDefaultData(), { type: 'setSpace', patch: { tilt: 0.5, searchBar: true } });
+    expect(ws(s).overrides).toEqual({ tilt: 0.5, searchBar: true });
+    s = reducer(s, { type: 'setSpace', patch: { tilt: null } });
+    expect(ws(s).overrides).toEqual({ searchBar: true });
+    s = reducer(s, { type: 'setSpace', patch: { searchBar: null } });
+    expect(ws(s).overrides).toBeUndefined();
+  });
+  it('tiene l\'inclinazione tra 0 e 1', () => {
+    expect(ws(reducer(createDefaultData(), { type: 'setSpace', patch: { tilt: 5 } })).overrides!.tilt).toBe(1);
+    expect(ws(reducer(createDefaultData(), { type: 'setSpace', patch: { tilt: -2 } })).overrides!.tilt).toBe(0);
+  });
+  it('blocca e sblocca lo spazio, senza toccare il resto', () => {
+    let s = reducer(createDefaultData(), { type: 'setSpace', patch: { tilt: 0.3 } });
+    s = reducer(s, { type: 'setSpace', patch: { locked: true } });
+    expect(ws(s).locked).toBe(true);
+    expect(ws(s).overrides).toEqual({ tilt: 0.3 });
+    expect(ws(reducer(s, { type: 'setSpace', patch: { locked: false } })).locked).toBe(false);
+  });
+  it('agisce solo sullo spazio indicato', () => {
+    let s = createDefaultData();
+    s = reducer(s, { type: 'addWorkspace', id: 'b', activate: false });
+    s = reducer(s, { type: 'setSpace', ws: 'b', patch: { tilt: 0 } });
+    expect(s.workspaces.find((x) => x.id === 'b')!.overrides).toEqual({ tilt: 0 });
+    expect(s.workspaces[0]!.overrides).toBeUndefined();
+  });
+});

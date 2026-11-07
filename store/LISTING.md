@@ -29,6 +29,8 @@ Make it yours
 • Snap tools together by their edges and move them as one
 • Containers hold other tools and can be closed to a single bar
 • Calm bell sounds when timers end
+• Pin widgets in place, tilt them by hand, and give each space its own options
+• Privacy mode: blur the whole page with one key
 • Throw things around with momentum, optional playful tilt
 • Five colour themes (or follow your system accent), English and Italian
 • Export and import everything as a file or as a copy-paste text
@@ -37,7 +39,7 @@ Private by design: no account, no cloud, no analytics, no network access. Your d
 
 **Descrizione (italiano):**
 
-Trasforma la nuova scheda in una scrivania che disponi come vuoi. Trascina gli strumenti dalla barra in alto: 50 widget in sette categorie (note, tempo, numeri, benessere, link e immagini, disposizione, svago). Più spazi come schede, widget che si agganciano e si muovono insieme, contenitori che si chiudono, taccuino con barra di formattazione, temi, esportazione e importazione di tutto come file o testo da incollare, e una breve visita guidata al primo avvio. Nessun account, nessun cloud, nessuna analisi: i dati restano sul tuo computer. Software libero (MIT).
+Trasforma la nuova scheda in una scrivania che disponi come vuoi. Trascina gli strumenti dalla barra in alto: 50 widget in sette categorie (note, tempo, numeri, benessere, link e immagini, disposizione, svago). Più spazi come schede, widget che si agganciano e si muovono insieme, contenitori che si chiudono, taccuino con barra di formattazione, widget che si fissano o si inclinano a mano, opzioni per ogni spazio, modalità privacy che sfoca la pagina con un tasto, temi, esportazione e importazione di tutto come file o testo da incollare, e una breve visita guidata al primo avvio. Nessun account, nessun cloud, nessuna analisi: i dati restano sul tuo computer. Software libero (MIT).
 
 ## Privacy tab
 
