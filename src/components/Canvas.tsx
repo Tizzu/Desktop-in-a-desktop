@@ -3,7 +3,7 @@ import type { Action } from '../core/store';
 import type { Link, Settings, Workspace, WidgetInstance } from '../core/types';
 import { bounceOff, intersects, type Rect } from '../core/physics';
 import { MAX_TILT, clampTilt, effectiveSearchBar, effectiveTilt, pinnedIds } from '../core/space';
-import { BAR_H, brokenLinks, computeLayout, contact, groupsOf, isCollapsed, nearPairs, snapDelta, touching, type Placed, type View } from '../core/layout';
+import { BAR_H, brokenLinks, computeLayout, contact, followRoom, followers, groupsOf, isCollapsed, nearPairs, slideRange, snapDelta, snapSlide, touching, type Placed, type View } from '../core/layout';
 import { getWidget } from '../widgets';
 import { useT } from '../core/i18n';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -120,6 +120,12 @@ function launch(members: Member[], vx0: number, vy0: number, canvas: HTMLElement
   for (const i of flight.ids) flights.set(i, flight);
 }
 
+type Patches = Extract<Action, { type: 'updateWidgets' }>['patches'];
+
+/** Riquadri a schermo dei widget sulla tela (non di quelli dentro un contenitore). */
+const topRects = (layout: Map<string, Placed>) =>
+  new Map<string, Rect>([...layout].filter(([, p]) => !p.child).map(([id, p]) => [id, { x: p.x, y: p.y, w: p.w, h: p.h }]));
+
 const asMember = (id: string, p: Placed): Member => ({ id, x: p.x, y: p.y, w: p.w, h: p.h, ext: p.ext });
 
 function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatch<Action>, mode: 'move' | 'resize' | 'rotate', ctx: Ctx) {
@@ -159,9 +165,15 @@ function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatc
   if (mode === 'resize') {
     if (ctx.pinned.has(widget.id)) return;
     const host = widget.parent && own.child ? layout.get(widget.parent) : undefined;
+    // I widget agganciati a destra e sotto seguono il nuovo bordo, con ciò che è agganciato a loro: restano attaccati.
+    // Per questo non si può ingrandire oltre quanto stanno nella finestra.
+    const rects0 = topRects(layout);
+    const follow = host ? [] : followers(widget.id, rects0, ctx.links, ctx.pinned);
+    const room = (axis: 'x' | 'y') => follow.filter((f) => f.axis === axis).reduce((m, f) => Math.min(m, followRoom(f, rects0, view)), Infinity);
+    const byId = new Map(ctx.widgets.map((x) => [x.id, x]));
     // Un widget dentro un contenitore non esce dal suo corpo; sulla tela, dalla finestra.
-    const maxW = host ? host.x + host.w - own.x : view.w - own.x - own.ext.x;
-    const maxH = host ? host.y + host.h - own.y : view.h - own.y - own.ext.y;
+    const maxW = Math.min(host ? host.x + host.w - own.x : view.w - own.x - own.ext.x, widget.w + room('x'));
+    const maxH = Math.min(host ? host.y + host.h - own.y : view.h - own.y - own.ext.y, widget.h + room('y'));
     let w = widget.w, h = widget.h;
     // Con proporzioni fisse (es. il camino) il widget si ingrandisce solo in modo uniforme: segue il puntatore sui due assi.
     const aspect = getWidget(widget.type)?.aspect;
@@ -179,14 +191,18 @@ function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatc
         w = Math.max(MIN_W, Math.min(widget.w + dx, Math.max(widget.w, maxW)));
         h = Math.max(MIN_H, Math.min(widget.h + dy, Math.max(widget.h, maxH)));
       }
-      dispatch({ type: 'updateWidget', id: widget.id, patch: { w, h } });
+      const dw = w - widget.w, dh = h - widget.h;
+      const patches: Patches = [{ id: widget.id, patch: { w, h } }];
+      for (const f of follow) for (const id of f.ids) { const x = byId.get(id)!; patches.push({ id, patch: f.axis === 'x' ? { x: x.x + dw } : { y: x.y + dh } }); }
+      dispatch({ type: 'updateWidgets', patches });
     };
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
-      // Cambiando misura i lati non coincidono più: gli agganci che non si toccano si sciolgono.
+      // Gli agganci che dopo il nuovo ridimensionamento non si toccano più (un lato troppo corto, un gruppo che non può seguire) si sciolgono.
       const rects = new Map([...layout].map(([id, p]) => [id, p as Rect]));
       rects.set(widget.id, { x: own.x, y: own.y, w, h });
+      for (const f of follow) for (const id of f.ids) { const r = rects.get(id)!; rects.set(id, f.axis === 'x' ? { ...r, x: r.x + (w - widget.w) } : { ...r, y: r.y + (h - widget.h) }); }
       const broken = brokenLinks(ctx.links.filter((l) => l.includes(widget.id)), rects);
       if (broken.length) dispatch({ type: 'unlink', pairs: broken });
     };
@@ -196,6 +212,24 @@ function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatc
   }
 
   const wasChild = own.child;
+  // Con Maiuscole un widget agganciato scorre lungo il bordo a cui è attaccato, restando agganciato, e si allinea ai vicini.
+  if (e.shiftKey && !wasChild && !ctx.pinned.has(widget.id) && ctx.links.some((l) => l.includes(widget.id))) {
+    const slide = slideRange(widget.id, topRects(layout), ctx.links, view);
+    if (slide) {
+      const horizontal = slide.axis === 'x';
+      const move = (ev: globalThis.PointerEvent) => {
+        const d = snapSlide(horizontal ? ev.clientX - sx : ev.clientY - sy, slide);
+        dispatch({ type: 'updateWidget', id: widget.id, patch: horizontal ? { x: widget.x + d } : { y: widget.y + d } });
+      };
+      const up = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      return;
+    }
+  }
   const ids = wasChild ? [widget.id] : groupsOf([...layout].filter(([, p]) => !p.child).map(([id]) => id), ctx.links).get(widget.id)!;
   if (ids.some((id) => ctx.pinned.has(id))) return; // se uno del gruppo è fissato, resta fermo tutto
   const members = ids.map((id) => asMember(id, layout.get(id)!));
@@ -331,6 +365,21 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
   );
   const ctx: Ctx = { widgets: workspace.widgets, links, layout, view, settings, containers, tilt, pinned };
 
+  // Aprire o chiudere un contenitore cambia la sua altezza: quelli agganciati sotto (e ciò che è agganciato a loro) seguono,
+  // così non finiscono sopra il contenitore appena aperto e, chiudendolo, non restano lontani.
+  const toggleContainer = (w: WidgetInstance, shut: boolean) => {
+    const patches: Patches = [{ id: w.id, patch: { state: { ...(w.state as object), collapsed: !shut } } }];
+    const p = layout.get(w.id);
+    if (p) {
+      const dh = (shut ? w.h : BAR_H) - p.h;
+      const byId = new Map(workspace.widgets.map((x) => [x.id, x]));
+      for (const f of followers(w.id, topRects(layout), links, pinned)) {
+        if (f.axis === 'y') for (const id of f.ids) patches.push({ id, patch: { y: byId.get(id)!.y + dh } });
+      }
+    }
+    dispatch({ type: 'updateWidgets', patches });
+  };
+
   // Confronta i riquadri a schermo (tengono conto di rotazione e scorrimento).
   const check = useCallback(() => {
     const bar = barRef.current;
@@ -425,7 +474,7 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
                   aria-expanded={!shut}
                   title={shut ? t('Open container') : t('Close container')}
                   onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => dispatch({ type: 'updateWidget', id: w.id, patch: { state: { ...(w.state as object), collapsed: !shut } } })}
+                  onClick={() => toggleContainer(w, shut)}
                 >{shut ? '▸' : '▾'}</button>
               )}
               <button

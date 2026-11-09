@@ -43,6 +43,8 @@ export interface Workspace {
   overrides?: SpaceOverrides;
   /** Vero se tutti i widget dello spazio sono bloccati (come se fossero tutti fissati). */
   locked?: boolean;
+  /** Vero se, entrando in questo spazio, la pagina si nasconde da sola (modalità privacy). */
+  privacy?: boolean;
   /** Agganci tra widget della tela (non tra quelli dentro un contenitore). */
   links?: Link[];
 }

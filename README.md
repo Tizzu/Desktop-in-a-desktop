@@ -24,6 +24,9 @@ Quality-of-life touches:
 - **Calm timer sounds** – a soft bell when a timer ends (Settings → *Timer sounds* turns it off).
 - **Changelog** – after an update a short "What's new" window opens once, showing what changed since your last visit (older versions are one click away). Reopen it from Settings → About.
 - **Safe removal** – diaries, trackers and counters that already hold entries ask for confirmation before the × removes them.
+- **Stuck widgets, refined** – resizing a widget keeps the ones attached to its right and bottom edges attached (they follow, with everything stuck to them, as long as they fit in the window; a side that becomes too short lets go). Stacked containers act like an accordion: opening one pushes the ones below it down, closing it pulls them back. Hold <kbd>Shift</kbd> while dragging a stuck widget to slide it along its edge, snapping to line up with its neighbour, without detaching it.
+- **Focus timer reset** – the ↺ button starts over (sessions counted, phase, running timer), and every new day it starts over by itself (turn it off in the timer's ⚙), waiting for a running timer to stop.
+- **Private spaces** – tick *Open this space in privacy mode* in a space's ⚙ menu and the page hides itself whenever you enter that space.
 - **Quick tour** – on first run a short guided tour highlights the drawer, spaces and settings and explains moving, sticking and containers; replay it any time from Settings.
 - **Search shortcut** – with the optional search bar in the centre, a key focuses it; the default is `\`, and you can pick another (even `Ctrl+K`) in Settings.
 - **Settings window** – the ⚙ in the bottom bar opens a window with categories (appearance, desk, privacy, sounds, data, language, about; the About page also has the quick tour and the changelog).

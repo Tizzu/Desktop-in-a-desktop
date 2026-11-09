@@ -85,6 +85,7 @@ export function sanitize(raw: unknown): AppData | undefined {
       links: w.links,
       overrides: cleanOverrides(w.overrides),
       locked: w.locked === true ? true : undefined,
+      privacy: w.privacy === true ? true : undefined,
       widgets: (Array.isArray(w.widgets) ? w.widgets : [])
         .filter((x) => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.type === 'string' && isNum(x.x) && isNum(x.y) && isNum(x.w) && isNum(x.h))
         .map((x) => ({ ...x, z: isNum(x.z) ? x.z : 1, pinned: x.pinned === true ? true : undefined })),

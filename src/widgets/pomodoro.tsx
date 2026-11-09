@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { dayKey } from './dates';
+import { useToday } from './useToday';
 import { clearAlarm, formatClock, setAlarm, useFinishChime, useTick } from './timerCore';
 import { DEFAULT_CONFIG, afterPhase, clampConfig, phaseMs, type Phase, type PomodoroConfig } from './pomodorocycle';
 import { registerWidget, type WidgetProps } from './registry';
@@ -12,6 +14,8 @@ interface PomodoroState {
   done: number;
   /** Durate, sessioni e avvio automatico; assenti nei dati salvati dalle versioni precedenti. */
   cfg?: PomodoroConfig;
+  /** Giorno a cui si riferiscono le sessioni contate: cambiato giorno, si riparte da capo (se il reset giornaliero è acceso). */
+  day?: string;
 }
 
 const LABEL: Record<Phase, string> = { focus: 'Focus', short: 'Short break', long: 'Long break' };
@@ -19,6 +23,7 @@ const LABEL: Record<Phase, string> = { focus: 'Focus', short: 'Short break', lon
 function Pomodoro({ state, onChange }: WidgetProps<PomodoroState>) {
   const t = useT();
   const cfg = clampConfig(state.cfg);
+  const today = useToday();
   const [editing, setEditing] = useState(false);
   const running = state.endsAt !== null;
   useTick(running);
@@ -46,6 +51,22 @@ function Pomodoro({ state, onChange }: WidgetProps<PomodoroState>) {
     if (state.endsAt !== null) clearAlarm(state.endsAt);
     onChange({ ...state, endsAt: null, left: null });
   };
+  // Ricomincia da capo: concentrazione, nessuna sessione contata, nessun timer.
+  const startOver = () => {
+    if (state.endsAt !== null) clearAlarm(state.endsAt);
+    onChange({ ...state, phase: 'focus', endsAt: null, left: null, done: 0, day: today });
+  };
+  const askStartOver = () => {
+    if ((running || state.done > 0) && !confirm(t('Start over? The sessions counted so far and the running timer will be reset.'))) return;
+    startOver();
+  };
+
+  // A mezzanotte (o alla prima apertura del giorno dopo) si ricomincia, ma mai a timer in corso: aspetta che si fermi.
+  // I dati di prima non avevano il giorno: da qui in poi lo tengono.
+  useEffect(() => {
+    if (state.day === undefined) onChange({ ...state, day: today });
+    else if (cfg.dailyReset && state.day !== today && state.endsAt === null) startOver();
+  }, [today, state.day, state.endsAt, cfg.dailyReset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Con l'avvio automatico, finita una fase parte subito la successiva.
   useEffect(() => {
@@ -74,6 +95,10 @@ function Pomodoro({ state, onChange }: WidgetProps<PomodoroState>) {
             <input type="checkbox" checked={cfg.auto} onChange={(e) => setCfg({ auto: e.target.checked })} />
             {t('Start the next phase automatically')}
           </label>
+          <label className="pomo-auto">
+            <input type="checkbox" checked={cfg.dailyReset} onChange={(e) => setCfg({ dailyReset: e.target.checked })} />
+            {t('Start over every day')}
+          </label>
         </div>
         <button className="btn primary" onClick={() => setEditing(false)}>{t('Done')}</button>
       </div>
@@ -83,6 +108,7 @@ function Pomodoro({ state, onChange }: WidgetProps<PomodoroState>) {
   const cycle = state.done % cfg.sessions;
   return (
     <div className="timer">
+      <button className="icon-btn timer-reset-btn" aria-label={t('Start over')} title={t('Start over')} onClick={askStartOver}>↺</button>
       <button className="icon-btn timer-cfg-btn" aria-label={t('Customise')} title={t('Customise')} onClick={() => setEditing(true)}>⚙</button>
       <div className="timer-note">{t(LABEL[state.phase])}</div>
       <div className={`timer-time${finished ? ' done' : ''}`}>{formatClock(remaining)}</div>
@@ -109,6 +135,6 @@ registerWidget({
   icon: '🍅',
   category: 'time',
   defaultSize: { w: 260, h: 310 },
-  initialState: () => ({ phase: 'focus', endsAt: null, left: null, done: 0, cfg: DEFAULT_CONFIG }),
+  initialState: () => ({ phase: 'focus', endsAt: null, left: null, done: 0, cfg: DEFAULT_CONFIG, day: dayKey() }),
   Component: Pomodoro,
 });

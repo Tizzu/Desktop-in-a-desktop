@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { Canvas } from './components/Canvas';
 import { Drawer } from './components/Drawer';
@@ -16,6 +16,10 @@ import { usePrivacy } from './core/usePrivacy';
 import { setTimerSound } from './core/sound';
 import { appVersion, compareVersions } from './core/version';
 import { createSync, mergeRemoteState, prepare, toShared, type Sync } from './core/sync';
+import type { AppData } from './core/types';
+
+// Segnaposto per "da salvare, a prescindere da quale stato c'era prima": non è mai uguale ai dati veri.
+const NOTHING = {} as AppData;
 
 export function App() {
   const storage = useMemo(() => createIdbStorage(), []);
@@ -26,18 +30,28 @@ export function App() {
   const [log, setLog] = useState(false); // novità della versione
   const firstRun = useRef(false);
   const { hidden, setHidden } = usePrivacy(data.settings, ready);
+  // Un spazio può aprirsi da solo in modalità privacy: appena ci si entra (o all'avvio, se è quello attivo) la pagina si
+  // nasconde, prima che il contenuto si veda. Una volta mostrata resta visibile finché non si cambia spazio.
+  const activeId = data.activeWorkspaceId;
+  const activeIsPrivate = data.workspaces.find((w) => w.id === activeId)?.privacy === true;
+  useLayoutEffect(() => {
+    if (ready && activeIsPrivate) setHidden(true);
+  }, [activeId, ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const dataRef = useRef(data);
   dataRef.current = data;
   const syncRef = useRef<Sync | undefined>(undefined);
-  // Vero se c'è una modifica fatta in QUESTA scheda da salvare: quelle ricevute da altre schede le salva chi le ha fatte.
-  const dirty = useRef(false);
+  // Se c'è una modifica fatta in QUESTA scheda da salvare (quelle ricevute da altre schede le salva chi le ha fatte),
+  // contiene lo stato che la precedeva: si salva solo quando i dati sono davvero cambiati. Un semplice "sì/no" verrebbe
+  // consumato troppo presto da una modifica fatta durante il primo disegno di un widget (che parte dagli effetti dei
+  // figli, prima di quello di salvataggio), e quella modifica non verrebbe salvata.
+  const dirtyFrom = useRef<AppData | null>(null);
 
   // Ogni modifica locale viene completata, applicata e inviata alle altre schede aperte.
   const dispatch = useCallback((a: Action) => {
     const action = prepare(a, dataRef.current);
-    dirty.current = true;
+    dirtyFrom.current = dataRef.current;
     rawDispatch(action);
     const shared = toShared(action);
     if (shared) syncRef.current?.sendAction(shared);
@@ -46,7 +60,7 @@ export function App() {
   useEffect(() => {
     // Una copia di sicurezza lasciata dalla chiusura precedente vale più del database.
     const backup = readBackup();
-    if (backup) dirty.current = true; // va riscritta nel database
+    if (backup) dirtyFrom.current = NOTHING; // va riscritta nel database
     (backup ? Promise.resolve(backup) : storage.load())
       .catch(() => undefined) // IndexedDB bloccato o illeggibile: si parte da zero, ma l'app si apre
       .then((saved) => {
@@ -85,8 +99,8 @@ export function App() {
 
   // Salva le modifiche locali (debounce), solo dopo il caricamento iniziale.
   useEffect(() => {
-    if (ready && dirty.current) {
-      dirty.current = false;
+    if (ready && dirtyFrom.current && data !== dirtyFrom.current) {
+      dirtyFrom.current = null;
       saver.schedule(data);
     }
   }, [data, ready, saver]);

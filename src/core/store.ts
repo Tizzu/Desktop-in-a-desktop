@@ -20,7 +20,7 @@ export type Action =
   | { type: 'unlink'; ws?: string; pairs: Link[] }
   | { type: 'bringToFront'; ws?: string; id: string }
   // Impostazioni proprie di uno spazio: `null` toglie quella dello spazio e torna a valere la globale.
-  | { type: 'setSpace'; ws?: string; patch: { tilt?: number | null; searchBar?: boolean | null; locked?: boolean } };
+  | { type: 'setSpace'; ws?: string; patch: { tilt?: number | null; searchBar?: boolean | null; locked?: boolean; privacy?: boolean } };
 
 const mapWorkspace = (s: AppData, ws: string | undefined, fn: (w: Workspace) => Workspace): AppData => {
   const target = ws ?? s.activeWorkspaceId;
@@ -112,7 +112,7 @@ export function reducer(s: AppData, a: Action): AppData {
           if (a.patch.searchBar == null) delete overrides.searchBar;
           else overrides.searchBar = a.patch.searchBar;
         }
-        return { ...w, overrides: Object.keys(overrides).length ? overrides : undefined, locked: a.patch.locked ?? w.locked };
+        return { ...w, overrides: Object.keys(overrides).length ? overrides : undefined, locked: a.patch.locked ?? w.locked, privacy: a.patch.privacy === undefined ? w.privacy : a.patch.privacy || undefined };
       });
     case 'bringToFront':
       return mapWorkspace(s, a.ws, (w) => {

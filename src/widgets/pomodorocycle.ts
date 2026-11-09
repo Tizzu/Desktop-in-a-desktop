@@ -9,9 +9,11 @@ export interface PomodoroConfig {
   sessions: number;
   /** Se vero, la fase successiva parte da sola quando una finisce. */
   auto: boolean;
+  /** Se vero, ogni giorno nuovo si riparte da capo (sessioni contate e fase), appena nessun timer è in corso. */
+  dailyReset: boolean;
 }
 
-export const DEFAULT_CONFIG: PomodoroConfig = { focus: 25, short: 5, long: 15, sessions: 4, auto: false };
+export const DEFAULT_CONFIG: PomodoroConfig = { focus: 25, short: 5, long: 15, sessions: 4, auto: false, dailyReset: true };
 
 const whole = (v: unknown, min: number, max: number, fallback: number) => {
   const n = Math.floor(Number(v));
@@ -26,6 +28,7 @@ export function clampConfig(c: Partial<PomodoroConfig> = {}): PomodoroConfig {
     long: whole(c.long, 1, 180, DEFAULT_CONFIG.long),
     sessions: whole(c.sessions, 1, 12, DEFAULT_CONFIG.sessions),
     auto: c.auto === true,
+    dailyReset: c.dailyReset !== false, // anche per i dati di prima, che non lo avevano: di serie è acceso
   };
 }
 

@@ -108,6 +108,7 @@ button { font: inherit; color: inherit; cursor: pointer; background: none; borde
 .timer-set input { width: 52px; padding: 3px 4px; text-align: center; font: inherit; color: inherit; background: var(--bar); border: 0; border-radius: 8px; }
 .timer-set .chip { margin-left: 4px; background: var(--bar); }
 .timer-cfg-btn { position: absolute; top: 4px; right: 8px; font-size: 15px; }
+.timer-reset-btn { position: absolute; top: 4px; right: 34px; font-size: 16px; }
 .pomo-cfg .interval-set { width: 100%; }
 .pomo-cfg .interval-set label { justify-content: space-between; }
 .pomo-auto { justify-content: flex-start !important; gap: 8px; cursor: pointer; }
@@ -668,6 +669,7 @@ section.drop-col { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 
 
 /* ===== Opzioni di uno spazio (ingranaggio accanto al nome) ===== */
 .space-gear { font-size: 14px; }
+.tab-lock { margin-left: 4px; font-size: 11px; opacity: .8; }
 .space-menu { position: fixed; z-index: 250000; box-sizing: border-box; display: grid; gap: 12px; padding: 14px 16px; background: var(--surface); color: var(--text); border-radius: 14px; box-shadow: 0 8px 28px rgb(var(--shadow) / .35); font-size: 13px; }
 .sm-field { display: grid; gap: 6px; }
 .sm-field > input { font: inherit; color: inherit; background: var(--bar); border: 0; border-radius: 8px; padding: 5px 8px; outline: none; }

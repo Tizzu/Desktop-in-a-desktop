@@ -228,3 +228,12 @@ describe('inclinazione, impostazioni per spazio, pin e privacy', () => {
     expect(sanitize(base({}, [], { overrides: 'rotto', locked: 'sì' }))!.workspaces[0]).toMatchObject({ overrides: undefined, locked: undefined });
   });
 });
+
+describe('spazio in modalità privacy nei dati salvati', () => {
+  it('si tiene solo se è vero', () => {
+    const base = (extra: Record<string, unknown>): any => ({ version: 3, activeWorkspaceId: 'a', workspaces: [{ id: 'a', name: 'x', order: 0, widgets: [], ...extra }] });
+    expect(sanitize(base({ privacy: true }))!.workspaces[0]!.privacy).toBe(true);
+    expect(sanitize(base({ privacy: 'sì' }))!.workspaces[0]!.privacy).toBeUndefined();
+    expect(sanitize(base({}))!.workspaces[0]!.privacy).toBeUndefined();
+  });
+});

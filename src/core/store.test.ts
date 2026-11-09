@@ -137,3 +137,15 @@ describe('impostazioni di uno spazio', () => {
     expect(s.workspaces[0]!.overrides).toBeUndefined();
   });
 });
+
+describe('spazio in modalità privacy', () => {
+  it('si imposta e si toglie, senza toccare il resto', () => {
+    let s = reducer(createDefaultData(), { type: 'setSpace', patch: { tilt: 0.5 } });
+    s = reducer(s, { type: 'setSpace', patch: { privacy: true } });
+    expect(s.workspaces[0]!.privacy).toBe(true);
+    expect(s.workspaces[0]!.overrides).toEqual({ tilt: 0.5 });
+    s = reducer(s, { type: 'setSpace', patch: { locked: true } }); // un'altra impostazione non lo cancella
+    expect(s.workspaces[0]!.privacy).toBe(true);
+    expect(reducer(s, { type: 'setSpace', patch: { privacy: false } }).workspaces[0]!.privacy).toBeUndefined(); // spento = nessun valore
+  });
+});

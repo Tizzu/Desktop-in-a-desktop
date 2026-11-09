@@ -14,6 +14,12 @@ describe('timer di concentrazione', () => {
     expect(clampConfig({ auto: 'sì' as never }).auto).toBe(false);
     expect(clampConfig({ auto: true }).auto).toBe(true);
   });
+  it('il reset giornaliero è acceso di serie, anche nei dati di prima, e si spegne solo se detto', () => {
+    expect(clampConfig().dailyReset).toBe(true);
+    expect(clampConfig({ focus: 25 } as never).dailyReset).toBe(true);
+    expect(clampConfig({ dailyReset: false }).dailyReset).toBe(false);
+    expect(clampConfig({ dailyReset: 'no' as never }).dailyReset).toBe(true);
+  });
   it('dopo la concentrazione viene una pausa, lunga ogni N sessioni; dopo la pausa si ricomincia', () => {
     expect(afterPhase('focus', 0, 4)).toEqual({ phase: 'short', done: 1 });
     expect(afterPhase('focus', 3, 4)).toEqual({ phase: 'long', done: 4 });

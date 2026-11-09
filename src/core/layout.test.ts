@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { brokenLinks, computeLayout, contact, groupsOf, nearPairs, snapDelta, touching, BAR_H } from './layout';
+import { brokenLinks, computeLayout, contact, contactSide, followRoom, followers, groupsOf, nearPairs, slideRange, snapDelta, snapSlide, touching, BAR_H } from './layout';
 import type { WidgetInstance } from './types';
 
 const w = (id: string, x: number, y: number, extra: Partial<WidgetInstance> = {}): WidgetInstance =>
@@ -114,5 +114,111 @@ describe('quantità di inclinazione', () => {
     const full = computeLayout([a], [], view, 1, none).get('a')!;
     expect(half.tilted && full.tilted).toBe(true);
     expect(full.ext.x).toBeGreaterThan(half.ext.x);
+  });
+});
+
+describe('da che lato si toccano', () => {
+  const a = { x: 100, y: 100, w: 200, h: 100 };
+  it('destra, sinistra, sotto, sopra', () => {
+    expect(contactSide(a, { x: 300, y: 120, w: 50, h: 50 })).toBe('right');
+    expect(contactSide(a, { x: 50, y: 120, w: 50, h: 50 })).toBe('left');
+    expect(contactSide(a, { x: 120, y: 200, w: 50, h: 50 })).toBe('below');
+    expect(contactSide(a, { x: 120, y: 50, w: 50, h: 50 })).toBe('above');
+  });
+  it('niente se non si toccano o se il tratto in comune è troppo corto', () => {
+    expect(contactSide(a, { x: 310, y: 120, w: 50, h: 50 })).toBeNull();
+    expect(contactSide(a, { x: 300, y: 190, w: 50, h: 50 })).toBeNull(); // 10px in comune
+  });
+});
+
+describe('chi segue un ridimensionamento', () => {
+  // a in alto a sinistra; b alla sua destra; c sotto b; d sotto a; e a sinistra di a
+  const rects = new Map([
+    ['a', { x: 100, y: 100, w: 200, h: 100 }],
+    ['b', { x: 300, y: 100, w: 200, h: 100 }],
+    ['c', { x: 300, y: 200, w: 200, h: 100 }],
+    ['d', { x: 100, y: 200, w: 200, h: 100 }],
+    ['e', { x: 0, y: 100, w: 100, h: 100 }],
+  ]);
+  it('i widget a destra seguono con tutto ciò che è agganciato a loro; quelli sotto seguono in verticale', () => {
+    const f = followers('a', rects, [['a', 'b'], ['b', 'c']]);
+    expect(f).toEqual([{ ids: ['b', 'c'], axis: 'x' }]);
+    expect(followers('a', rects, [['a', 'd']])).toEqual([{ ids: ['d'], axis: 'y' }]);
+  });
+  it('quelli a sinistra o sopra non si muovono', () => {
+    expect(followers('a', rects, [['a', 'e']])).toEqual([]);
+    expect(followers('d', rects, [['a', 'd']])).toEqual([]); // a è sopra d
+  });
+  it('destra e sotto insieme: ognuno il suo gruppo', () => {
+    const f = followers('a', rects, [['a', 'b'], ['a', 'd']]);
+    expect(f.map((x) => [x.ids, x.axis])).toEqual([[['b'], 'x'], [['d'], 'y']]);
+  });
+  it('due vicini sullo stesso lato, agganciati fra loro, sono un gruppo solo', () => {
+    const r = new Map([
+      ['t', { x: 0, y: 0, w: 400, h: 100 }],
+      ['u1', { x: 0, y: 100, w: 200, h: 100 }],
+      ['u2', { x: 200, y: 100, w: 200, h: 100 }],
+    ]);
+    const f = followers('t', r, [['t', 'u1'], ['t', 'u2'], ['u1', 'u2']]);
+    expect(f).toHaveLength(1);
+    expect(f[0]!.ids.sort()).toEqual(['u1', 'u2']);
+    expect(f[0]!.axis).toBe('y');
+  });
+  it('non seguono i gruppi agganciati da due lati diversi, né quelli con un widget fissato', () => {
+    // b a destra e d sotto, ma c li lega: spostamenti incompatibili
+    const r = new Map([...rects, ['c', { x: 300, y: 200, w: 200, h: 100 }]]);
+    expect(followers('a', r, [['a', 'b'], ['a', 'd'], ['b', 'c'], ['c', 'd']])).toEqual([]);
+    expect(followers('a', rects, [['a', 'b'], ['b', 'c']], new Set(['c']))).toEqual([]);
+  });
+  it('un widget senza agganci, o sconosciuto, non ha chi lo segue', () => {
+    expect(followers('a', rects, [])).toEqual([]);
+    expect(followers('zz', rects, [['a', 'b']])).toEqual([]);
+  });
+  it('lo spazio in cui possono spostarsi dentro la finestra', () => {
+    const f = { ids: ['b', 'c'], axis: 'x' as const };
+    expect(followRoom(f, rects, { w: 700, h: 600 })).toBe(200);
+    expect(followRoom(f, rects, { w: 400, h: 600 })).toBe(0); // già fuori: mai negativo
+    expect(followRoom({ ids: ['c'], axis: 'y' }, rects, { w: 700, h: 350 })).toBe(50);
+  });
+});
+
+describe('scorrere un widget agganciato lungo il bordo', () => {
+  const view = { w: 1000, h: 900 };
+  // b sta a destra di a, un po' più in basso
+  const rects = new Map([
+    ['a', { x: 100, y: 300, w: 200, h: 200 }],
+    ['b', { x: 300, y: 340, w: 200, h: 200 }],
+  ]);
+  it('scorre sull\'asse del bordo e resta toccato', () => {
+    const s = slideRange('b', rects, [['a', 'b']], view)!;
+    expect(s.axis).toBe('y');
+    expect(s.lo).toBe(300 + 24 - 540); // il bordo superiore di a più MIN_OVERLAP, meno il bordo inferiore di b
+    expect(s.hi).toBe(300 + 200 - 24 - 340);
+  });
+  it('conosce gli allineamenti: bordo superiore, inferiore e centro', () => {
+    expect(slideRange('b', rects, [['a', 'b']], view)!.stops.sort((x, y) => x - y)).toEqual([-40, -40, -40]);
+    const taller = new Map([['a', { x: 100, y: 300, w: 200, h: 300 }], ['b', { x: 300, y: 320, w: 200, h: 100 }]]);
+    expect(slideRange('b', taller, [['a', 'b']], view)!.stops.sort((x, y) => x - y)).toEqual([-20, 80, 180]); // alto, centro, basso
+  });
+  it('scatta sull\'allineamento solo se è vicino, e resta nei limiti', () => {
+    const s = slideRange('b', rects, [['a', 'b']], view)!;
+    expect(snapSlide(-45, s)).toBe(-40); // a 5px: scatta
+    expect(snapSlide(-20, s)).toBe(-20); // lontano: libero
+    expect(snapSlide(9999, s)).toBe(s.hi);
+    expect(snapSlide(-9999, s)).toBe(s.lo);
+  });
+  it('non esce dalla finestra', () => {
+    const edge = new Map([['a', { x: 100, y: 0, w: 200, h: 200 }], ['b', { x: 300, y: 10, w: 200, h: 200 }]]);
+    expect(slideRange('b', edge, [['a', 'b']], view)!.lo).toBe(-10); // non sopra il bordo superiore
+  });
+  it('dai bordi sopra e sotto si scorre in orizzontale', () => {
+    const r = new Map([['a', { x: 100, y: 100, w: 200, h: 100 }], ['b', { x: 140, y: 200, w: 200, h: 100 }]]);
+    expect(slideRange('b', r, [['a', 'b']], view)!.axis).toBe('x');
+  });
+  it('senza agganci, con agganci su lati diversi o toccati male: niente scorrimento', () => {
+    expect(slideRange('b', rects, [], view)).toBeNull();
+    const l = new Map([['a', { x: 0, y: 0, w: 200, h: 200 }], ['b', { x: 200, y: 0, w: 200, h: 200 }], ['c', { x: 200, y: 200, w: 200, h: 100 }]]);
+    expect(slideRange('b', l, [['a', 'b'], ['b', 'c']], view)).toBeNull(); // uno a sinistra, uno sotto
+    expect(slideRange('b', new Map([['a', { x: 0, y: 0, w: 100, h: 100 }], ['b', { x: 500, y: 0, w: 100, h: 100 }]]), [['a', 'b']], view)).toBeNull();
   });
 });

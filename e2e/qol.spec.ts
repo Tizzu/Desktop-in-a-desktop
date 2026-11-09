@@ -390,18 +390,18 @@ test.describe('timer di concentrazione', () => {
     await w.getByRole('button', { name: 'Done', exact: true }).click();
 
     // Senza avvio automatico: finita la fase si ferma e propone "Next".
-    await w.getByRole('button', { name: 'Start' }).click();
+    await w.getByRole('button', { name: 'Start', exact: true }).click();
     await page.clock.fastForward(61_000);
     await expect(w.getByRole('button', { name: 'Next' })).toBeVisible();
     await w.getByRole('button', { name: 'Next' }).click();
     await expect(w.locator('.timer-note')).toHaveText('Short break');
-    await expect(w.getByRole('button', { name: 'Start' })).toBeVisible(); // ferma
+    await expect(w.getByRole('button', { name: 'Start', exact: true })).toBeVisible(); // ferma
 
     // Con l'avvio automatico: dalla pausa si passa da sola alla concentrazione.
     await w.getByRole('button', { name: 'Customise' }).click();
     await w.getByLabel('Start the next phase automatically').check();
     await w.getByRole('button', { name: 'Done', exact: true }).click();
-    await w.getByRole('button', { name: 'Start' }).click();
+    await w.getByRole('button', { name: 'Start', exact: true }).click();
     await page.clock.fastForward(121_000);
     await expect(w.locator('.timer-note')).toHaveText('Focus');
     await expect(w.getByRole('button', { name: 'Pause' })).toBeVisible(); // già in corso

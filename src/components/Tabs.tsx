@@ -80,6 +80,11 @@ function SpaceMenu({ space, anchor, dispatch, onClose }: { space: Workspace; anc
         </label>
         <small className="set-hint">{t('Nothing in the space moves, resizes or gets added.')}</small>
       </div>
+
+      <label className="set-check">
+        <input type="checkbox" checked={space.privacy === true} onChange={(e) => set({ privacy: e.target.checked })} />
+        {t('Open this space in privacy mode')}
+      </label>
     </div>
   );
 }
@@ -112,6 +117,7 @@ export function Tabs({ data, dispatch }: { data: AppData; dispatch: Dispatch<Act
               title={t('Double-click to rename')}
             >
               {w.name}
+              {w.privacy && <span className="tab-lock" aria-hidden title={t('Opens in privacy mode')}>🔒</span>}
             </button>
           )}
           {w.id === data.activeWorkspaceId && editing !== w.id && (

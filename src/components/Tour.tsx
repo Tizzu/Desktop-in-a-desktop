@@ -65,7 +65,7 @@ export function Tour({ onClose }: Props) {
     {
       id: 'snap',
       title: t('Stick widgets together'),
-      body: t('Bring one widget\'s edge close to another\'s and they snap together: from then on they move as one, whichever title bar you grab. Hover the join and press the broken chain to detach them. Hold Alt while dragging to avoid snapping.'),
+      body: t('Bring one widget\'s edge close to another\'s and they snap together: from then on they move as one, whichever title bar you grab. Hover the join and press the broken chain to detach them. Hold Alt while dragging to avoid snapping, or Shift to slide a stuck widget along its edge and line it up.'),
       art: <Snap />,
     },
     {

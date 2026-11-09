@@ -3,6 +3,15 @@ export interface Release { version: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.6.0',
+    items: [
+      'Focus timer: a Start over button, and the sessions count starts over every day (optional)',
+      'Widgets that are stuck together stay stuck when you resize one of them, and containers stacked under one another push the others down when they open',
+      'Hold Shift while dragging a stuck widget to slide it along its edge and line it up with its neighbour',
+      'Added an option to enable automatic privacy mode when a space is selected: turn it on from the ⚙ next to the space name',
+    ],
+  },
+  {
     version: '0.5.0',
     items: [
       'A new Settings window with categories',

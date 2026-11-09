@@ -179,3 +179,115 @@ export function brokenLinks(links: Link[], rects: Map<string, Rect>): Link[] {
     return !ra || !rb || !contact(ra, rb);
   });
 }
+
+export type Side = 'right' | 'below' | 'left' | 'above';
+
+/** Da che lato `b` tocca `a`, se si toccano per un lato (con un tratto in comune di almeno MIN_OVERLAP). */
+export function contactSide(a: Rect, b: Rect): Side | null {
+  if (overlapY(a, b) >= MIN_OVERLAP) {
+    if (Math.abs(a.x + a.w - b.x) <= TOUCH) return 'right';
+    if (Math.abs(b.x + b.w - a.x) <= TOUCH) return 'left';
+  }
+  if (overlapX(a, b) >= MIN_OVERLAP) {
+    if (Math.abs(a.y + a.h - b.y) <= TOUCH) return 'below';
+    if (Math.abs(b.y + b.h - a.y) <= TOUCH) return 'above';
+  }
+  return null;
+}
+
+/** Un gruppo di widget che, quando `id` cambia misura, si sposta con lui (verso destra se `x`, verso il basso se `y`). */
+export interface Follower { ids: string[]; axis: 'x' | 'y' }
+
+/**
+ * Cosa segue un widget che si ingrandisce o si rimpicciolisce (anche un contenitore che si apre o si chiude): i widget
+ * agganciati al suo lato destro o inferiore, con tutto ciò che è agganciato a loro, così restano attaccati. Quelli
+ * sul lato sinistro o superiore non si muovono. Un gruppo non segue se contiene un widget fissato, o se è agganciato
+ * anche da un altro lato (non si saprebbe di quanto spostarlo): i suoi agganci si sciolgono, se il contatto si perde.
+ */
+export function followers(id: string, rects: ReadonlyMap<string, Rect>, links: Link[], pinned: ReadonlySet<string> = new Set()): Follower[] {
+  const self = rects.get(id);
+  if (!self) return [];
+  const adj = new Map<string, string[]>();
+  for (const [a, b] of links) {
+    if (!rects.has(a) || !rects.has(b)) continue;
+    adj.set(a, [...(adj.get(a) ?? []), b]);
+    adj.set(b, [...(adj.get(b) ?? []), a]);
+  }
+  const need = new Map<string, 'x' | 'y' | 'none'>();
+  for (const n of adj.get(id) ?? []) {
+    const side = contactSide(self, rects.get(n)!);
+    if (side) need.set(n, side === 'right' ? 'x' : side === 'below' ? 'y' : 'none');
+  }
+  const seen = new Set<string>();
+  const out: Follower[] = [];
+  for (const start of need.keys()) {
+    if (seen.has(start)) continue;
+    const comp: string[] = [];
+    const stack = [start];
+    seen.add(start);
+    while (stack.length) {
+      const c = stack.pop()!;
+      comp.push(c);
+      for (const nx of adj.get(c) ?? []) if (nx !== id && !seen.has(nx)) { seen.add(nx); stack.push(nx); }
+    }
+    const axes = new Set(comp.filter((c) => need.has(c)).map((c) => need.get(c)!));
+    const axis = axes.size === 1 ? [...axes][0]! : 'none';
+    if (axis === 'none' || comp.some((c) => pinned.has(c))) continue;
+    out.push({ ids: comp, axis });
+  }
+  return out;
+}
+
+/** Di quanto può spostarsi in avanti (a destra o in basso) un gruppo che segue, restando nella finestra. */
+export function followRoom(f: Follower, rects: ReadonlyMap<string, Rect>, view: View): number {
+  const edge = Math.max(...f.ids.map((i) => { const r = rects.get(i)!; return f.axis === 'x' ? r.x + r.w : r.y + r.h; }));
+  return Math.max(0, (f.axis === 'x' ? view.w : view.h) - edge);
+}
+
+/** Come può scorrere un widget agganciato lungo il bordo a cui è attaccato (`d` è lo spostamento sull'asse `axis`). */
+export interface Slide { axis: 'x' | 'y'; lo: number; hi: number; stops: number[] }
+
+/**
+ * Lo scorrimento possibile di `id` lungo il lato dei suoi agganci: resta toccato da ciascun vicino (almeno MIN_OVERLAP
+ * in comune) e dentro la finestra. `stops` sono gli spostamenti che lo allineano a un vicino (bordo iniziale, finale o
+ * centro). Null se non è agganciato, o se i suoi agganci sono su lati in direzioni diverse (non si saprebbe dove scorrere).
+ */
+export function slideRange(id: string, rects: ReadonlyMap<string, Rect>, links: Link[], view: View): Slide | null {
+  const self = rects.get(id);
+  if (!self) return null;
+  let axis: 'x' | 'y' | null = null;
+  let lo = -Infinity, hi = Infinity;
+  const stops: number[] = [];
+  for (const [a, b] of links) {
+    const other = a === id ? b : b === id ? a : null;
+    const o = other === null ? undefined : rects.get(other);
+    if (!o) continue;
+    const side = contactSide(self, o);
+    if (!side) continue;
+    const ax = side === 'right' || side === 'left' ? 'y' : 'x';
+    if (axis && axis !== ax) return null;
+    axis = ax;
+    if (ax === 'y') {
+      lo = Math.max(lo, o.y + MIN_OVERLAP - (self.y + self.h));
+      hi = Math.min(hi, o.y + o.h - MIN_OVERLAP - self.y);
+      stops.push(o.y - self.y, o.y + o.h - (self.y + self.h), o.y + o.h / 2 - (self.y + self.h / 2));
+    } else {
+      lo = Math.max(lo, o.x + MIN_OVERLAP - (self.x + self.w));
+      hi = Math.min(hi, o.x + o.w - MIN_OVERLAP - self.x);
+      stops.push(o.x - self.x, o.x + o.w - (self.x + self.w), o.x + o.w / 2 - (self.x + self.w / 2));
+    }
+  }
+  if (!axis) return null;
+  if (axis === 'y') { lo = Math.max(lo, -self.y); hi = Math.min(hi, view.h - self.h - self.y); }
+  else { lo = Math.max(lo, -self.x); hi = Math.min(hi, view.w - self.w - self.x); }
+  if (lo > hi) return null;
+  return { axis, lo, hi, stops: stops.filter((v) => v >= lo && v <= hi) };
+}
+
+/** Porta lo spostamento `d` dentro i limiti dello scorrimento e, se è vicino a un allineamento, lo fa scattare lì. */
+export function snapSlide(d: number, slide: Slide): number {
+  const v = Math.min(slide.hi, Math.max(slide.lo, d));
+  let best = v, dist = SNAP + 1;
+  for (const stop of slide.stops) if (Math.abs(stop - v) < dist) { dist = Math.abs(stop - v); best = stop; }
+  return dist <= SNAP ? best : v;
+}
