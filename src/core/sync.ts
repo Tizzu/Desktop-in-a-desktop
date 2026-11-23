@@ -4,14 +4,26 @@ import type { AppData } from './types';
 /** Completa un'azione con tutto ciò che deve essere identico in ogni scheda (id, nome, spazio di destinazione). */
 export function prepare(a: Action, s: AppData): Action {
   switch (a.type) {
+    case 'removeWidget':
+      return { ...a, ws: a.ws ?? s.activeWorkspaceId, at: a.at ?? Date.now() };
+    case 'duplicateWidget': {
+      // Ogni scheda deve dare gli stessi id alle copie.
+      const ws = a.ws ?? s.activeWorkspaceId;
+      const space = s.workspaces.find((w) => w.id === ws);
+      const ids = { ...a.ids };
+      for (const x of space?.widgets ?? []) if (x.id === a.id || x.parent === a.id) ids[x.id] ??= crypto.randomUUID();
+      return { ...a, ws, ids };
+    }
     case 'addWorkspace': {
       const order = a.order ?? s.workspaces.reduce((m, w) => Math.max(m, w.order), -1) + 1;
       return { ...a, id: a.id ?? crypto.randomUUID(), order, name: a.name ?? `Space ${order + 1}`, activate: a.activate ?? true };
     }
     case 'addWidget':
+    case 'addLinkedProgress':
+    case 'restoreWidget':
+    case 'moveWidgetToSpace':
     case 'updateWidget':
     case 'updateWidgets':
-    case 'removeWidget':
     case 'link':
     case 'unlink':
     case 'setSpace':

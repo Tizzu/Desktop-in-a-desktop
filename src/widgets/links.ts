@@ -24,3 +24,12 @@ export function resolveQuery(input: string): Query | null {
   }
   return { kind: 'search', text: t };
 }
+
+/** Porta l'elemento `id` in posizione `index` (contata sulla lista senza l'elemento stesso); fuori misura va agli estremi. */
+export function placeItem<T extends { id: string }>(items: T[], id: string, index: number): T[] {
+  const item = items.find((x) => x.id === id);
+  if (!item) return items;
+  const rest = items.filter((x) => x.id !== id);
+  const at = Math.max(0, Math.min(index, rest.length));
+  return [...rest.slice(0, at), item, ...rest.slice(at)];
+}

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { registerWidget, type WidgetProps } from './registry';
 import { useT } from '../core/i18n';
+import { useConfirm } from '../components/Confirm';
 
-interface Item { id: string; text: string; done: boolean }
+interface Item { id: string; text: string; done: boolean; /** id del widget Progresso collegato */ progress?: string }
 interface TodoState { items: Item[] }
 
-function Todo({ state, onChange }: WidgetProps<TodoState>) {
+function Todo({ state, onChange, linkTask }: WidgetProps<TodoState>) {
   const t = useT();
+  const ask = useConfirm();
   const [draft, setDraft] = useState('');
   const left = state.items.filter((i) => !i.done).length;
 
@@ -31,8 +33,18 @@ function Todo({ state, onChange }: WidgetProps<TodoState>) {
       <ul className="todo-list">
         {state.items.map((i) => (
           <li key={i.id} className={i.done ? 'done' : ''}>
-            <input type="checkbox" checked={i.done} onChange={(e) => patch(i.id, { done: e.target.checked })} />
+            <input type="checkbox" checked={i.done} disabled={!!i.progress} title={i.progress ? t('Follows its progress widget') : undefined} onChange={(e) => patch(i.id, { done: e.target.checked })} />
             <span>{i.text}</span>
+            {i.progress ? (
+              <span className="todo-linked" role="img" aria-label={t('Linked to a progress widget')} title={t('Linked to a progress widget')}>📈</span>
+            ) : linkTask && (
+              <button
+                className="icon-btn todo-link-btn"
+                aria-label={t('Track {text} with a progress widget', { text: i.text })}
+                title={t('Track with a progress widget')}
+                onClick={async () => { if (await ask(t('Open a progress widget beside this list and link it to this task?'), { confirm: t('Open') })) linkTask(i.id, i.text); }}
+              >📈</button>
+            )}
             <button className="icon-btn" aria-label={t('Delete')} onClick={() => onChange({ items: state.items.filter((x) => x.id !== i.id) })}>×</button>
           </li>
         ))}

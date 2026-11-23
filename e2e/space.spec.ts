@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { addWidget, appData, closeSettings, dragToolTo, dragWidget, openApp, openSettings, position, readSaved, seed, widgetAt, widgets } from './helpers';
+import { addWidget, appData, closeSettings, dragToolTo, dragWidget, openApp, openSettings, position, readSaved, seed, widgetAt, widgets, answer, confirmBox } from './helpers';
 
 // Coordinate rispetto al centro della tela (versione 3 dei dati).
 const open = async (page: Page, list: unknown[], settings: Record<string, unknown> = {}) => {
@@ -112,13 +112,12 @@ test.describe('opzioni di uno spazio (ingranaggio accanto al nome)', () => {
   test('la × del tab resta e chiede conferma prima di chiudere lo spazio', async ({ page }) => {
     await openApp(page);
     await page.getByRole('button', { name: 'New space' }).click();
-    let message = '';
-    page.once('dialog', (d) => { message = d.message(); void d.dismiss(); });
     await page.getByRole('button', { name: 'Close Space 2' }).click();
-    await expect.poll(() => message).toContain('Delete "Space 2"');
+    await expect(confirmBox(page)).toContainText('Delete "Space 2"');
+    await answer(page, false);
     await expect(page.locator('.tab')).toHaveCount(2); // annullato: resta
-    page.once('dialog', (d) => void d.accept());
     await page.getByRole('button', { name: 'Close Space 2' }).click();
+    await answer(page, true);
     await expect(page.locator('.tab')).toHaveCount(1);
   });
 
@@ -203,10 +202,9 @@ test.describe('pin dei widget', () => {
     await dragWidget(page, b, 50, 0); // gli altri si muovono come prima
     expect((await position(b)).x).toBeGreaterThan(pb.x + 40);
 
-    let message = '';
-    page.once('dialog', (d) => { message = d.message(); void d.dismiss(); });
     await a.getByRole('button', { name: 'Remove widget' }).click();
-    await expect.poll(() => message).toContain('pinned');
+    await expect(confirmBox(page)).toContainText('pinned');
+    await answer(page, false);
     await expect(widgets(page)).toHaveCount(2);
 
     await a.getByRole('button', { name: 'Unpin widget', exact: true }).click();

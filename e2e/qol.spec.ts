@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { addWidget, appData, closeSettings, dragToolTo, openApp, openSettings, seed, widgets } from './helpers';
+import { addWidget, appData, closeSettings, dragToolTo, openApp, openSettings, seed, widgets, answer, confirmBox } from './helpers';
 
 test('scorciatoia di ricerca: si sceglie dalle impostazioni e sostituisce quella predefinita', async ({ page }) => {
   await openApp(page);
@@ -438,13 +438,12 @@ test('chiudere un widget che tiene traccia dell\'utente chiede conferma, solo se
 
   const j = await addWidget(page, 'Journal', 400, 250);
   await j.getByLabel('One line about the day 1').fill('giornata tranquilla');
-  let asked = '';
-  page.once('dialog', (d) => { asked = d.message(); void d.dismiss(); });
   await j.getByRole('button', { name: 'Remove widget' }).click();
-  await expect.poll(() => asked).toContain('holds your entries');
+  await expect(confirmBox(page)).toContainText('holds your entries');
+  await answer(page, false);
   await expect(widgets(page)).toHaveCount(1); // annullato: resta
-  page.once('dialog', (d) => void d.accept());
   await j.getByRole('button', { name: 'Remove widget' }).click();
+  await answer(page, true);
   await expect(widgets(page)).toHaveCount(0);
 
   // Un widget che non tiene traccia (un post-it) si chiude senza domande.
@@ -467,7 +466,6 @@ test('serie di giorni: etichetta fissa "Days…", testo libero e partenza da un 
   const again = widgets(page).first();
   await expect(again.locator('.counter-value')).toContainText('12');
   await expect(again.getByLabel('Name')).toHaveValue('without sugar');
-  page.once('dialog', (d) => void d.accept());
   await again.getByRole('button', { name: 'Restart from today' }).click();
   await expect(again.locator('.counter-value')).toContainText('0');
   await expect(again.getByLabel('Starting count')).toHaveValue('0');

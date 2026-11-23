@@ -1,8 +1,9 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { THEMES } from './themes';
 import { isLang } from './i18n';
-import { DEFAULT_PRIVACY_KEY, validShortcut } from './shortcut';
-import { CATEGORY_IDS, DEFAULT_SETTINGS, PRIVACY_IDLE_MINUTES, SCHEMA_VERSION, type AppData, type Settings, type SpaceOverrides } from './types';
+import { DEFAULT_PALETTE_KEY, DEFAULT_PRIVACY_KEY, validShortcut } from './shortcut';
+import { TEMPLATES } from './templates';
+import { CATEGORY_IDS, DEFAULT_SETTINGS, MAX_CUSTOM_TEMPLATES, type CustomTemplate, type TemplateWidget, PRIVACY_IDLE_MINUTES, SCHEMA_VERSION, TINT_IDS, TRASH_LIMIT, type AppData, type Settings, type SpaceOverrides, type TrashedWidget } from './types';
 
 export interface Storage {
   load(): Promise<AppData | undefined>;
@@ -44,6 +45,9 @@ function migrateSettings(raw: unknown): Settings {
   if (merged.activeCategory !== 'all' && !CATEGORY_IDS.includes(merged.activeCategory)) merged.activeCategory = 'all';
   merged.searchKey = validShortcut(merged.searchKey);
   merged.privacyKey = validShortcut(merged.privacyKey, DEFAULT_PRIVACY_KEY);
+  merged.paletteKey = validShortcut(merged.paletteKey, DEFAULT_PALETTE_KEY);
+  // Chi aveva già scelto Ctrl+K (o un'altra delle scorciatoie) per altro la tiene: la palette ripiega su una libera.
+  if (merged.paletteKey === merged.searchKey || merged.paletteKey === merged.privacyKey) merged.paletteKey = ['Alt+k', 'Ctrl+Alt+k'].find((k) => k !== merged.searchKey && k !== merged.privacyKey)!;
   if (!PRIVACY_IDLE_MINUTES.includes(merged.privacyIdle)) merged.privacyIdle = DEFAULT_SETTINGS.privacyIdle;
   // L'avviso era un sì/no (no = velo vuoto): ora ce n'è sempre uno, al centro o discreto in un angolo.
   const notice: unknown = merged.privacyNotice;
@@ -88,7 +92,7 @@ export function sanitize(raw: unknown): AppData | undefined {
       privacy: w.privacy === true ? true : undefined,
       widgets: (Array.isArray(w.widgets) ? w.widgets : [])
         .filter((x) => x && typeof x === 'object' && typeof x.id === 'string' && typeof x.type === 'string' && isNum(x.x) && isNum(x.y) && isNum(x.w) && isNum(x.h))
-        .map((x) => ({ ...x, z: isNum(x.z) ? x.z : 1, pinned: x.pinned === true ? true : undefined })),
+        .map((x) => ({ ...x, z: isNum(x.z) ? x.z : 1, pinned: x.pinned === true ? true : undefined, tint: (TINT_IDS as readonly unknown[]).includes(x.tint) ? x.tint : undefined })),
     }));
   if (workspaces.length === 0) return undefined;
   const activeWorkspaceId = workspaces.some((w) => w.id === d.activeWorkspaceId) ? d.activeWorkspaceId! : workspaces[0]!.id;
@@ -101,6 +105,43 @@ const viewCenter = () => (typeof window === 'undefined' ? undefined : { x: windo
 /** Tipi di widget tolti dall'app: vengono scartati dai dati salvati e importati. */
 const REMOVED_TYPES = ['frame'];
 
+/** Cestino letto dal disco: tiene solo le voci complete, al massimo TRASH_LIMIT. */
+function cleanTrash(raw: unknown): TrashedWidget[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((t): t is TrashedWidget => !!t && typeof t === 'object' && typeof t.space === 'string' && isNum(t.at) && !!t.widget && typeof t.widget === 'object'
+      && typeof t.widget.id === 'string' && typeof t.widget.type === 'string' && isNum(t.widget.x) && isNum(t.widget.y) && isNum(t.widget.w) && isNum(t.widget.h))
+    .slice(0, TRASH_LIMIT);
+}
+
+/** Modelli di spazio letti dal disco: tiene solo quelli ben formati (e coerenti negli indici), al massimo MAX_CUSTOM_TEMPLATES. */
+function cleanTemplates(raw: unknown): CustomTemplate[] {
+  if (!Array.isArray(raw)) return [];
+  const out: CustomTemplate[] = [];
+  for (const t of raw) {
+    if (!t || typeof t !== 'object' || typeof t.id !== 'string' || typeof t.name !== 'string' || !Array.isArray(t.widgets) || out.some((o) => o.id === t.id)) continue;
+    const list = t.widgets.slice(0, 200);
+    const widgets: TemplateWidget[] = list
+      .filter((w: any) => w && typeof w === 'object' && typeof w.type === 'string' && isNum(w.x) && isNum(w.y) && isNum(w.w) && isNum(w.h))
+      .map((w: any, _i: number, kept: unknown[]) => ({
+        type: w.type, x: w.x, y: w.y, w: w.w, h: w.h,
+        ...(Number.isInteger(w.parent) && w.parent >= 0 && w.parent < kept.length ? { parent: w.parent } : {}),
+        ...(typeof w.label === 'string' ? { label: w.label } : {}),
+        ...('state' in w && w.state !== undefined ? { state: w.state } : {}),
+      }));
+    // Se qualche widget è stato scartato gli indici non tornano più: meglio rinunciare al modello che sbagliare i contenitori e gli agganci.
+    if (!widgets.length || widgets.length !== list.length) continue;
+    const links = (Array.isArray(t.links) ? t.links : []).filter((l: unknown): l is [number, number] => Array.isArray(l) && l.length === 2 && Number.isInteger(l[0]) && Number.isInteger(l[1]) && l[0] >= 0 && l[1] >= 0 && l[0] < widgets.length && l[1] < widgets.length && l[0] !== l[1]);
+    out.push({ id: t.id, name: t.name.slice(0, 60), widgets, ...(links.length ? { links } : {}) });
+    if (out.length >= MAX_CUSTOM_TEMPLATES) break;
+  }
+  return out;
+}
+
+/** Id dei modelli di serie tolti: solo quelli che esistono davvero, una volta sola. */
+const cleanHidden = (raw: unknown): string[] =>
+  Array.isArray(raw) ? [...new Set(raw.filter((id): id is string => typeof id === 'string' && TEMPLATES.some((t) => t.id === id)))] : [];
+
 // Punto unico per le migrazioni di schema (v1 -> v2: settings e rotazione; v2 -> v3: coordinate rispetto al centro,
 // per cui serve `center`, il centro della tela di quel momento; senza, le posizioni restano com'erano).
 export function migrate(data: AppData, center?: { x: number; y: number }): AppData {
@@ -108,6 +149,9 @@ export function migrate(data: AppData, center?: { x: number; y: number }): AppDa
   return {
     ...data,
     version: SCHEMA_VERSION,
+    trash: cleanTrash((data as { trash?: unknown }).trash),
+    templates: cleanTemplates((data as { templates?: unknown }).templates),
+    hiddenTemplates: cleanHidden((data as { hiddenTemplates?: unknown }).hiddenTemplates),
     settings: migrateSettings((data as { settings?: unknown }).settings),
     workspaces: data.workspaces.map((w0) => {
       const w = { ...w0, widgets: w0.widgets.filter((x) => !REMOVED_TYPES.includes(x.type)) };
@@ -136,6 +180,9 @@ export function createDefaultData(): AppData {
     version: SCHEMA_VERSION,
     activeWorkspaceId: id,
     settings: { ...DEFAULT_SETTINGS },
+    trash: [],
+    templates: [],
+    hiddenTemplates: [],
     workspaces: [{ id, name: 'Space 1', order: 0, widgets: [], links: [] }],
   };
 }

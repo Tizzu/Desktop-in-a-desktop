@@ -1,7 +1,11 @@
 import type { Lang } from './i18n';
-import { DEFAULT_PRIVACY_KEY } from './shortcut';
+import { DEFAULT_PALETTE_KEY, DEFAULT_PRIVACY_KEY } from './shortcut';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
+
+/** Tinte con cui si può colorare la barra di un widget (la tinta vera è nel CSS, per tema). */
+export const TINT_IDS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'] as const;
+export type TintId = (typeof TINT_IDS)[number];
 
 /** Due widget agganciati per un lato: si muovono insieme. */
 export type Link = [string, string];
@@ -22,6 +26,8 @@ export interface WidgetInstance {
   rot: number;
   /** Vero se è fissato: non si sposta, non si ridimensiona, non parte con l'inerzia. */
   pinned?: boolean;
+  /** Tinta della barra del titolo; assente = quella del tema. */
+  tint?: TintId;
   /** Id del widget contenitore che lo ospita; assente se sta direttamente sulla tela. */
   parent?: string;
   state: unknown;
@@ -77,6 +83,8 @@ export interface Settings {
   seenVersion: string;
   /** Vero dopo la visita guidata (completata o saltata): non si ripropone da sola. */
   tourDone: boolean;
+  /** Scorciatoia che apre la palette dei comandi (cerca widget, aggiunge tool, cambia spazio…). */
+  paletteKey: string;
   /** Scorciatoia che nasconde la pagina (modalità privacy). */
   privacyKey: string;
   /** Avviso mentre la pagina è nascosta: 'center' = al centro, con un grosso pulsante per riaprirla; 'corner' = discreto, in basso a destra (tasto e occhio). */
@@ -92,10 +100,55 @@ export interface Settings {
 /** Minuti di inattività tra cui scegliere per la modalità privacy (0 = mai). */
 export const PRIVACY_IDLE_MINUTES = [0, 1, 2, 5, 10, 15, 30];
 
-export const DEFAULT_SETTINGS: Settings = { language: 'en', tilt: 1, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: false, timerSound: true, seenVersion: '', privacyKey: DEFAULT_PRIVACY_KEY, privacyNotice: 'center', privacyOnLeave: false, privacyIdle: 0, activeCategory: 'all' };
+export const DEFAULT_SETTINGS: Settings = { language: 'en', tilt: 1, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: false, timerSound: true, seenVersion: '', paletteKey: DEFAULT_PALETTE_KEY, privacyKey: DEFAULT_PRIVACY_KEY, privacyNotice: 'center', privacyOnLeave: false, privacyIdle: 0, activeCategory: 'all' };
+
+/** Un widget tolto di recente: si può rimettere dalle impostazioni (Dati). */
+export interface TrashedWidget {
+  widget: WidgetInstance;
+  /** Spazio da cui è stato tolto. */
+  space: string;
+  /** Quando (ms dall'epoca). */
+  at: number;
+}
+
+/** Un widget di un modello di spazio: com'era nello spazio da cui è stato salvato (posizioni rispetto al centro, o al contenitore). */
+export interface TemplateWidget {
+  type: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Posizione, nell'elenco del modello, del contenitore che lo ospita. */
+  parent?: number;
+  /** Nome di un contenitore (se non si salva il contenuto, il nome resta). */
+  label?: string;
+  /** Contenuto salvato; assente = il widget parte vuoto. */
+  state?: unknown;
+}
+
+/** Un modello di spazio creato dall'utente (salvato da uno spazio). */
+export interface CustomTemplate {
+  id: string;
+  name: string;
+  widgets: TemplateWidget[];
+  /** Coppie di posizioni (nell'elenco) di widget agganciati. */
+  links?: [number, number][];
+}
+
+/** Quanti modelli propri si possono tenere. */
+export const MAX_CUSTOM_TEMPLATES = 30;
+
+/** Quanti widget tolti si tengono nel cestino. */
+export const TRASH_LIMIT = 10;
 
 export interface AppData {
   version: number;
+  /** Widget tolti di recente, il più recente per primo. */
+  trash?: TrashedWidget[];
+  /** Modelli di spazio creati dall'utente. */
+  templates?: CustomTemplate[];
+  /** Id dei modelli di serie che l'utente ha tolto (si rimettono dalle impostazioni). */
+  hiddenTemplates?: string[];
   activeWorkspaceId: string;
   settings: Settings;
   workspaces: Workspace[];

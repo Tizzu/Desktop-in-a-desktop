@@ -1,5 +1,6 @@
+import zlib from 'node:zlib';
 import { expect, test, type Page } from '@playwright/test';
-import { appData, closeSettings, dragToolTo, dragWidget, openApp, openSettings, position, readSaved, seed, settled, widgets } from './helpers';
+import { appData, closeSettings, dragToolTo, dragWidget, openApp, openSettings, position, readSaved, seed, settled, widgets, answer, confirmBox } from './helpers';
 const transformOf = (page: Page) => widgets(page).first().evaluate((el) => (el as HTMLElement).style.transform);
 
 test.beforeEach(async ({ page }) => {
@@ -92,7 +93,7 @@ test('un salvataggio del vecchio formato (v1) si apre e viene aggiornato', async
   await settled(widgets(page).first());
   await page.waitForTimeout(600);
   const saved = await readSaved(page);
-  expect(saved.version).toBe(3);
+  expect(saved.version).toBe(4);
   expect(saved.settings).toMatchObject({ tilt: 1, physics: true, theme: 'warm', categories: true });
   expect(saved.workspaces[0].widgets[0]).toMatchObject({ rot: 0, state: { text: 'dal passato' } });
 });
@@ -143,16 +144,16 @@ test('esporta e importa: i dati si ritrovano dopo una sostituzione', async ({ pa
   await expect(widgets(page)).toHaveCount(0);
 
   await openSettings(page, 'Data');
-  page.once('dialog', (d) => void d.accept());
   await page.getByLabel('Backup file').setInputFiles(file);
+  await expect(confirmBox(page)).toContainText('Replace everything');
+  await answer(page, true);
   await expect(widgets(page)).toHaveCount(1);
   await expect(widgets(page).first().locator('textarea')).toHaveValue('da salvare');
 
   // Un file sbagliato viene rifiutato senza toccare niente.
-  let message = '';
-  page.once('dialog', (d) => { message = d.message(); void d.accept(); });
   await page.getByLabel('Backup file').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"no":1}') });
-  await expect.poll(() => message).toContain('not a valid backup');
+  await expect(confirmBox(page)).toContainText('not a valid backup');
+  await answer(page, true);
   await expect(widgets(page)).toHaveCount(1);
 });
 
@@ -174,15 +175,59 @@ test('esporta come testo: si copia una stringa e la si incolla per ripristinare'
   await page.getByRole('button', { name: 'Paste from text' }).click();
   // Una chat può spezzare la riga e aggiungere parole intorno: si ritrova lo stesso.
   await page.getByLabel('Backup text').fill(`Ecco il mio desk!\n${text.slice(0, 40)}\n${text.slice(40)}\nciao`);
-  page.once('dialog', (d) => void d.accept());
   await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await answer(page, true);
   await expect(widgets(page)).toHaveCount(1);
   await expect(widgets(page).first().locator('textarea')).toHaveValue('via chat');
 
   await expect(page.getByLabel('Backup text')).toHaveCount(0); // dopo l'importazione l'area si chiude
   await page.getByRole('button', { name: 'Paste from text' }).click();
-  page.once('dialog', (d) => void d.accept());
   await page.getByLabel('Backup text').fill('DIAD1:nonvalido:END');
   await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(confirmBox(page)).toContainText('not a valid backup');
+  await answer(page, true);
   await expect(widgets(page)).toHaveCount(1);
+});
+
+test('un backup di un formato più recente non si importa: avviso «dal futuro» e niente cambia', async ({ page }) => {
+  await openApp(page);
+  await dragToolTo(page, 'Sticky note', 400, 250);
+  await widgets(page).first().locator('textarea').fill('resto qui');
+  await openSettings(page, 'Data');
+  const wrap = (version: number, appVersion?: string) => JSON.stringify({ format: 'desktop-in-a-desktop', exportedAt: 'x', ...(appVersion ? { appVersion } : {}), data: { version, activeWorkspaceId: 'a', workspaces: [{ id: 'a', name: 'Futuro', order: 0, widgets: [] }] } });
+
+  // Da file, con la versione dell'estensione che l'ha scritto.
+  await page.getByLabel('Backup file').setInputFiles({ name: 'futuro.json', mimeType: 'application/json', buffer: Buffer.from(wrap(99, '9.9.9')) });
+  const box = confirmBox(page);
+  await expect(box).toContainText('visitor from the future');
+  await expect(box).toContainText('version 9.9.9');
+  await expect(box).toContainText('v99');
+  await expect(box.getByRole('button')).toHaveCount(1); // è un avviso: un solo pulsante
+  await answer(page, true);
+  await closeSettings(page);
+  await expect(widgets(page)).toHaveCount(1);
+  await expect(widgets(page).first().locator('textarea')).toHaveValue('resto qui');
+  await expect(page.locator('.tab')).toHaveCount(1); // niente è stato sostituito
+
+  // Incollato come testo, senza la versione dell'estensione.
+  await openSettings(page, 'Data');
+  await page.getByRole('button', { name: 'Paste from text' }).click();
+  const packed = 'DIAD1:' + zlib.gzipSync(wrap(50)).toString('base64url') + ':END';
+  await page.getByLabel('Backup text').fill(packed);
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(confirmBox(page)).toContainText('data format v50');
+  await expect(confirmBox(page)).not.toContainText('was made with version');
+  await answer(page, true);
+  await closeSettings(page);
+  await expect(widgets(page).first().locator('textarea')).toHaveValue('resto qui');
+});
+
+test('in italiano l\'avviso dal futuro è tradotto', async ({ page }) => {
+  await openApp(page);
+  await seed(page, appData([], { language: 'it' }));
+  await page.getByRole('button', { name: 'Impostazioni', exact: true }).click();
+  await page.getByRole('tab', { name: 'Dati', exact: true }).click();
+  await page.getByLabel('File di backup').setInputFiles({ name: 'f.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'desktop-in-a-desktop', data: { version: 99, activeWorkspaceId: 'a', workspaces: [] } })) });
+  await expect(confirmBox(page)).toContainText('viaggiatore del futuro');
+  await expect(confirmBox(page).getByRole('button', { name: 'Capito' })).toBeVisible();
 });

@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { appData, openApp, position, readSaved, seed, widgetAt, widgets } from './helpers';
+import { appData, openApp, position, readSaved, seed, widgetAt, widgets, answer, confirmBox } from './helpers';
 
 // Coordinate rispetto al centro della tela (versione 3 dei dati); `links` sono gli agganci già presenti.
 const openLinked = async (page: Page, list: unknown[], links: [string, string][], settings: Record<string, unknown> = {}) => {
@@ -218,12 +218,13 @@ test.describe('timer di concentrazione: ricominciare', () => {
     await expect(phase(w)).toHaveText('Short break');
     await expect(lit(w)).toHaveCount(2);
 
-    page.once('dialog', (d) => void d.dismiss());
     await w.getByRole('button', { name: 'Start over', exact: true }).click();
+    await answer(page, false);
     await expect(lit(w)).toHaveCount(2); // annullato
 
-    page.once('dialog', (d) => { expect(d.message()).toContain('Start over'); void d.accept(); });
     await w.getByRole('button', { name: 'Start over', exact: true }).click();
+    await expect(confirmBox(page)).toContainText('Start over');
+    await answer(page, true);
     await expect(phase(w)).toHaveText('Focus');
     await expect(lit(w)).toHaveCount(0);
   });
@@ -232,8 +233,8 @@ test.describe('timer di concentrazione: ricominciare', () => {
     await openLinked(page, [pomo({ phase: 'focus', endsAt: Date.now() + 3_600_000, done: 0 })], [], FREE);
     const w = widgets(page).first();
     await expect(w.getByRole('button', { name: 'Pause' })).toBeVisible();
-    page.once('dialog', (d) => void d.accept());
     await w.getByRole('button', { name: 'Start over', exact: true }).click();
+    await answer(page, true);
     await expect(w.getByRole('button', { name: 'Start', exact: true })).toBeVisible(); // fermo
     await expect(w.locator('.timer-time')).toHaveText('25:00');
   });

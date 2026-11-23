@@ -2,10 +2,13 @@ import { useEffect, useRef, useState, type Dispatch, type KeyboardEvent as React
 import { LANGUAGES, isLang, useT } from '../core/i18n';
 import type { Action } from '../core/store';
 import { THEMES } from '../core/themes';
-import { DEFAULT_PRIVACY_KEY, DEFAULT_SHORTCUT } from '../core/shortcut';
+import { DEFAULT_PALETTE_KEY, DEFAULT_PRIVACY_KEY, DEFAULT_SHORTCUT } from '../core/shortcut';
 import { appVersion } from '../core/version';
-import { exportFileName, exportJson, exportText, parseImport, parseImportText } from '../core/backup';
-import { PRIVACY_IDLE_MINUTES, type AppData, type Settings } from '../core/types';
+import { exportFileName, exportJson, exportText, readImport, readImportText, type ImportResult } from '../core/backup';
+import { PRIVACY_IDLE_MINUTES, SCHEMA_VERSION, type AppData, type Settings } from '../core/types';
+import { getWidget } from '../widgets';
+import { TEMPLATES } from '../core/templates';
+import { useConfirm } from './Confirm';
 import { ShortcutPicker } from './ShortcutPicker';
 
 const REPO = 'https://github.com/Tizzu/Desktop-in-a-desktop';
@@ -97,9 +100,17 @@ function Desk({ settings, set }: SectionProps) {
         label={t('Search shortcut')}
         value={settings.searchKey}
         fallback={DEFAULT_SHORTCUT}
-        taken={[settings.privacyKey]}
+        taken={[settings.privacyKey, settings.paletteKey]}
         onChange={(searchKey) => set({ searchKey })}
       />
+      <ShortcutPicker
+        label={t('Command palette shortcut')}
+        value={settings.paletteKey}
+        fallback={DEFAULT_PALETTE_KEY}
+        taken={[settings.searchKey, settings.privacyKey]}
+        onChange={(paletteKey) => set({ paletteKey })}
+      />
+      <p className="set-hint">{t('The palette finds widgets in every space, adds tools and switches space. Also: Ctrl+Z / Ctrl+Shift+Z undo and redo changes to the desk, Alt+1…9 switch space, and Ctrl+click on a widget\'s title bar selects it, to move several at once.')}</p>
       <p className="set-hint">{t('The search bar can also be shown or hidden for a single space, with the ⚙ next to its name.')}</p>
     </>
   );
@@ -114,7 +125,7 @@ function Privacy({ settings, set, onHide }: SectionProps & { onHide: () => void 
         label={t('Privacy mode shortcut')}
         value={settings.privacyKey}
         fallback={DEFAULT_PRIVACY_KEY}
-        taken={[settings.searchKey]}
+        taken={[settings.searchKey, settings.paletteKey]}
         onChange={(privacyKey) => set({ privacyKey })}
       />
       <label className="set-row">
@@ -136,29 +147,87 @@ function Privacy({ settings, set, onHide }: SectionProps & { onHide: () => void 
   );
 }
 
+/** Widget tolti di recente: si possono rimettere nello spazio che si sta guardando. */
+function Trash({ data, dispatch }: { data: AppData; dispatch: Dispatch<Action> }) {
+  const t = useT();
+  const ask = useConfirm();
+  const trash = data.trash ?? [];
+  const names = new Map(data.workspaces.map((w) => [w.id, w.name]));
+  return (
+    <section className="trash" aria-label={t('Recently removed')}>
+      <h4>{t('Recently removed')}</h4>
+      {trash.length === 0 ? (
+        <p className="set-hint">{t('Widgets you remove with the × wait here, with their content.')}</p>
+      ) : (
+        <>
+          <ul>
+            {trash.map(({ widget, space }) => {
+              const def = getWidget(widget.type);
+              const name = (def?.container && (widget.state as { label?: string } | null)?.label) || t(def?.label ?? widget.type);
+              return (
+                <li key={widget.id}>
+                  <span>{def?.icon} {name}<small>{names.get(space) ?? ''}</small></span>
+                  <button className="set-btn" disabled={!def} onClick={() => dispatch({ type: 'restoreWidget', id: widget.id })}>{t('Restore')}</button>
+                </li>
+              );
+            })}
+          </ul>
+          <button className="set-btn" onClick={async () => { if (await ask(t('Empty the list? These widgets will be gone for good.'), { confirm: t('Empty the list'), danger: true })) dispatch({ type: 'emptyTrash' }); }}>{t('Empty the list')}</button>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Modelli di spazio: si rimettono quelli di serie che si sono tolti. */
+function Templates({ data, dispatch }: { data: AppData; dispatch: Dispatch<Action> }) {
+  const t = useT();
+  const hidden = (data.hiddenTemplates ?? []).filter((id) => TEMPLATES.some((x) => x.id === id)).length;
+  return (
+    <section className="trash" aria-label={t('Space templates')}>
+      <h4>{t('Space templates')}</h4>
+      <p className="set-hint">{t('Hover the ＋ in the bottom bar to create a space from a template, to delete templates or to save the current space as one.')}</p>
+      <button className="set-btn" disabled={hidden === 0} onClick={() => dispatch({ type: 'restoreTemplates' })}>
+        {hidden === 0 ? t('All the default templates are available') : t('Restore the default templates ({n})', { n: hidden })}
+      </button>
+    </section>
+  );
+}
+
 function Data({ data, dispatch }: { data: AppData; dispatch: Dispatch<Action> }) {
   const t = useT();
+  const ask = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState<string | null>(null); // area di testo aperta (per incollare, o per copiare a mano)
   const [note, setNote] = useState('');
 
   const exportData = () => {
-    const url = URL.createObjectURL(new Blob([exportJson(data)], { type: 'application/json' }));
+    const url = URL.createObjectURL(new Blob([exportJson(data, new Date(), appVersion())], { type: 'application/json' }));
     const a = Object.assign(document.createElement('a'), { href: url, download: exportFileName() });
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  const apply = (imported: AppData | undefined) => {
-    if (!imported) return void alert(t('That is not a valid backup.'));
-    if (!confirm(t('Replace everything with this backup? The current data will be lost: export it first if you need it.'))) return false;
+  const apply = async (result: ImportResult) => {
+    if (!result.ok) {
+      // Un backup di un formato più recente non si legge con le regole di oggi (se ne perderebbe una parte): si spiega cosa fare.
+      const text = result.reason !== 'newer'
+        ? t('That is not a valid backup.')
+        : result.appVersion
+          ? t('Whoa, a visitor from the future! This backup was made with version {app} (data format v{n}), but this version only knows up to v{m}. Either this copy of the extension is out of date, or you are showing me wonders yet to come. Update the extension here, then import it again. Nothing has been changed.', { app: result.appVersion, n: result.version, m: SCHEMA_VERSION })
+          : t('Whoa, a visitor from the future! This backup uses data format v{n}, but this version only knows up to v{m}. Either this copy of the extension is out of date, or you are showing me wonders yet to come. Update the extension here, then import it again. Nothing has been changed.', { n: result.version, m: SCHEMA_VERSION });
+      await ask(text, { notice: true, confirm: result.reason === 'newer' ? t('Got it') : undefined });
+      return false;
+    }
+    const imported = result.data;
+    if (!(await ask(t('Replace everything with this backup? The current data will be lost: export it first if you need it.'), { confirm: t('Replace'), danger: true }))) return false;
     dispatch({ type: 'import', data: imported });
     return true;
   };
   const importData = async (file: File | undefined) => {
-    if (file) apply(parseImport(await file.text()));
+    if (file) await apply(readImport(await file.text()));
   };
   const copyText = async () => {
-    const out = await exportText(data);
+    const out = await exportText(data, new Date(), appVersion());
     try {
       await navigator.clipboard.writeText(out);
       setText(null);
@@ -169,7 +238,7 @@ function Data({ data, dispatch }: { data: AppData; dispatch: Dispatch<Action> })
     }
   };
   const importText = async () => {
-    if (apply(await parseImportText(text ?? ''))) setText(null);
+    if (await apply(await readImportText(text ?? ''))) setText(null);
   };
 
   return (
@@ -198,6 +267,8 @@ function Data({ data, dispatch }: { data: AppData; dispatch: Dispatch<Action> })
           <button className="backup-go" onClick={() => void importText()}>{t('Import')}</button>
         </>
       )}
+      <Trash data={data} dispatch={dispatch} />
+      <Templates data={data} dispatch={dispatch} />
     </>
   );
 }

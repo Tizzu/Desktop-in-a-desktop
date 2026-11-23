@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type Dispatch } from 'react';
 import type { Action } from '../core/store';
 import type { AppData, Workspace } from '../core/types';
 import { randomTilt } from '../core/space';
+import { NewSpaceMenu } from './NewSpaceMenu';
 import { useT } from '../core/i18n';
+import { useConfirm } from './Confirm';
 
 const MENU_W = 290;
 
@@ -89,8 +91,9 @@ function SpaceMenu({ space, anchor, dispatch, onClose }: { space: Workspace; anc
   );
 }
 
-export function Tabs({ data, dispatch }: { data: AppData; dispatch: Dispatch<Action> }) {
+export function Tabs({ data, dispatch, onNewSpace, onSaveTemplate }: { data: AppData; dispatch: Dispatch<Action>; onNewSpace: (templateId?: string) => void; onSaveTemplate: (name: string, keepContent: boolean) => void }) {
   const t = useT();
+  const ask = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ id: string; rect: DOMRect } | null>(null);
   const sorted = [...data.workspaces].sort((a, b) => a.order - b.order);
@@ -133,12 +136,12 @@ export function Tabs({ data, dispatch }: { data: AppData; dispatch: Dispatch<Act
             <button
               className="icon-btn"
               aria-label={t('Close {name}', { name: w.name })}
-              onClick={() => confirm(t('Delete "{name}" and its widgets?', { name: w.name })) && dispatch({ type: 'removeWorkspace', id: w.id })}
+              onClick={async () => { if (await ask(t('Delete "{name}" and its widgets?', { name: w.name }), { confirm: t('Delete'), danger: true })) dispatch({ type: 'removeWorkspace', id: w.id }); }}
             >×</button>
           )}
         </div>
       ))}
-      <button className="tab-add" aria-label={t('New space')} onClick={() => dispatch({ type: 'addWorkspace', name: t('Space {n}', { n: Math.max(-1, ...data.workspaces.map((w) => w.order)) + 2 }) })}>＋</button>
+      <NewSpaceMenu data={data} dispatch={dispatch} onNewSpace={onNewSpace} onSaveTemplate={onSaveTemplate} activeName={data.workspaces.find((w) => w.id === data.activeWorkspaceId)?.name ?? ''} activeEmpty={(data.workspaces.find((w) => w.id === data.activeWorkspaceId)?.widgets.length ?? 0) === 0} />
       {open && menu && <SpaceMenu space={open} anchor={menu.rect} dispatch={dispatch} onClose={() => setMenu(null)} />}
     </nav>
   );

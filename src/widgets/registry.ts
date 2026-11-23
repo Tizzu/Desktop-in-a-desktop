@@ -4,6 +4,8 @@ import type { CategoryId } from '../core/types';
 export interface WidgetProps<S = any> {
   state: S;
   onChange: (state: S) => void;
+  /** Solo per la lista "Da fare": apre un widget Progresso a lato, collegato al task. Assente se lo spazio è bloccato. */
+  linkTask?: (itemId: string, text: string) => void;
 }
 
 export interface WidgetDef<S = any> {

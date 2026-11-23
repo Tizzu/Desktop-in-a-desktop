@@ -5,6 +5,7 @@ import { clearAlarm, formatClock, setAlarm, useFinishChime, useTick } from './ti
 import { DEFAULT_CONFIG, afterPhase, clampConfig, phaseMs, type Phase, type PomodoroConfig } from './pomodorocycle';
 import { registerWidget, type WidgetProps } from './registry';
 import { useT } from '../core/i18n';
+import { useConfirm } from '../components/Confirm';
 
 interface PomodoroState {
   phase: Phase;
@@ -22,6 +23,7 @@ const LABEL: Record<Phase, string> = { focus: 'Focus', short: 'Short break', lon
 
 function Pomodoro({ state, onChange }: WidgetProps<PomodoroState>) {
   const t = useT();
+  const ask = useConfirm();
   const cfg = clampConfig(state.cfg);
   const today = useToday();
   const [editing, setEditing] = useState(false);
@@ -56,8 +58,8 @@ function Pomodoro({ state, onChange }: WidgetProps<PomodoroState>) {
     if (state.endsAt !== null) clearAlarm(state.endsAt);
     onChange({ ...state, phase: 'focus', endsAt: null, left: null, done: 0, day: today });
   };
-  const askStartOver = () => {
-    if ((running || state.done > 0) && !confirm(t('Start over? The sessions counted so far and the running timer will be reset.'))) return;
+  const askStartOver = async () => {
+    if ((running || state.done > 0) && !(await ask(t('Start over? The sessions counted so far and the running timer will be reset.'), { confirm: t('Start over'), danger: true }))) return;
     startOver();
   };
 

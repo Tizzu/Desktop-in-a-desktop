@@ -2,11 +2,15 @@ import { forwardRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, u
 import type { Action } from '../core/store';
 import type { Link, Settings, Workspace, WidgetInstance } from '../core/types';
 import { bounceOff, intersects, type Rect } from '../core/physics';
-import { MAX_TILT, clampTilt, effectiveSearchBar, effectiveTilt, pinnedIds } from '../core/space';
+import { MAX_TILT, clampTilt, effectiveSearchBar, effectiveTilt, pinnedIds, randomTilt } from '../core/space';
 import { BAR_H, brokenLinks, computeLayout, contact, followRoom, followers, groupsOf, isCollapsed, nearPairs, slideRange, snapDelta, snapSlide, touching, type Placed, type View } from '../core/layout';
 import { getWidget } from '../widgets';
+import { progressBeside } from '../core/tasklink';
 import { useT } from '../core/i18n';
+import { SelectionBar } from './SelectionBar';
+import { useConfirm } from './Confirm';
 import { ErrorBoundary } from './ErrorBoundary';
+import { WidgetMenu } from './WidgetMenu';
 import { SearchBox } from './SearchBox';
 
 const LABEL_MAX = 40; // lunghezza massima del nome di un contenitore
@@ -31,10 +35,17 @@ interface Ctx {
   tilt: number;
   /** Widget fissati (o tutti, se lo spazio è bloccato): non si spostano né si ridimensionano. */
   pinned: ReadonlySet<string>;
+  /** Widget scelti (Ctrl+clic sulla barra) e liberi sulla tela: trascinandone uno si muovono tutti insieme. */
+  selection: ReadonlySet<string>;
 }
 
 interface Flight { raf: number; ids: string[] }
 const flights = new Map<string, Flight>();
+
+/** Ferma ogni lancio in corso (serve prima di annullare: i widget in volo riscriverebbero le loro posizioni). */
+export function stopAllFlights() {
+  for (const id of [...flights.keys()]) stopFlight(id);
+}
 
 function stopFlight(id: string) {
   const f = flights.get(id);
@@ -213,7 +224,9 @@ function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatc
 
   const wasChild = own.child;
   // Con Maiuscole un widget agganciato scorre lungo il bordo a cui è attaccato, restando agganciato, e si allinea ai vicini.
-  if (e.shiftKey && !wasChild && !ctx.pinned.has(widget.id) && ctx.links.some((l) => l.includes(widget.id))) {
+  // Trascinare un widget scelto (con almeno un altro) sposta tutta la scelta, ognuno con ciò che gli è agganciato.
+  const multi = !wasChild && ctx.selection.has(widget.id) && ctx.selection.size > 1;
+  if (e.shiftKey && !multi && !wasChild && !ctx.pinned.has(widget.id) && ctx.links.some((l) => l.includes(widget.id))) {
     const slide = slideRange(widget.id, topRects(layout), ctx.links, view);
     if (slide) {
       const horizontal = slide.axis === 'x';
@@ -230,7 +243,8 @@ function startGesture(e: PointerEvent, widget: WidgetInstance, dispatch: Dispatc
       return;
     }
   }
-  const ids = wasChild ? [widget.id] : groupsOf([...layout].filter(([, p]) => !p.child).map(([id]) => id), ctx.links).get(widget.id)!;
+  const groups = wasChild ? undefined : groupsOf([...layout].filter(([, p]) => !p.child).map(([id]) => id), ctx.links);
+  const ids = wasChild ? [widget.id] : multi ? [...new Set([...ctx.selection].flatMap((id) => groups!.get(id) ?? [id]))] : groups!.get(widget.id)!;
   if (ids.some((id) => ctx.pinned.has(id))) return; // se uno del gruppo è fissato, resta fermo tutto
   const members = ids.map((id) => asMember(id, layout.get(id)!));
   const single = members.length === 1 && !ctx.containers.has(widget.id);
@@ -322,18 +336,25 @@ interface Props {
   workspace: Workspace;
   settings: Settings;
   dispatch: Dispatch<Action>;
+  /** Gli altri spazi (per mandarci un widget). */
+  spaces: { id: string; name: string }[];
+  /** Widget da far risaltare un attimo (trovato dalla palette). */
+  flashId?: string;
 }
 
 // Sovrapposizione minima (px) perché la barra fissa si consideri coperta: ignora gli angoli dei widget inclinati.
 const COVER_TOLERANCE = 6;
 
-export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ workspace, settings, dispatch }, ref) {
+export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ workspace, settings, dispatch, spaces, flashId }, ref) {
   const t = useT();
+  const ask = useConfirm();
   const barRef = useRef<HTMLDivElement>(null);
   const [covered, setCovered] = useState(false);
   const [active, setActive] = useState(false);
   const [view, setView] = useState<View>({ w: 0, h: 0 });
   const [renaming, setRenaming] = useState<string | null>(null); // id del contenitore di cui si sta cambiando il nome
+  const [menu, setMenu] = useState<{ id: string; rect: DOMRect } | null>(null); // menu ⋯ aperto
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set()); // widget scelti per spostarli in blocco
   const canvasEl = useRef<HTMLDivElement | null>(null);
   const setRefs = useCallback((el: HTMLDivElement | null) => {
     canvasEl.current = el;
@@ -363,7 +384,20 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [workspace.widgets, workspace.links, view, tilt, containers],
   );
-  const ctx: Ctx = { widgets: workspace.widgets, links, layout, view, settings, containers, tilt, pinned };
+  // I widget scelti che esistono ancora; quelli dentro un contenitore non si muovono in blocco (hanno il loro posto nel contenitore).
+  const chosen = workspace.widgets.filter((x) => selected.has(x.id));
+  const selection = useMemo(() => new Set(chosen.filter((x) => !x.parent).map((x) => x.id)), [chosen.map((x) => x.id + (x.parent ?? '')).join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ctx: Ctx = { widgets: workspace.widgets, links, layout, view, settings, containers, tilt, pinned, selection };
+
+  const toggleSelect = (id: string) => setSelected((s) => { const n = new Set(s); if (!n.delete(id)) n.add(id); return n; });
+  // Con Esc o un clic sulla tela vuota la scelta si toglie.
+  useEffect(() => {
+    if (!selected.size) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setSelected(new Set());
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selected.size]);
+  useEffect(() => setSelected(new Set()), [workspace.id]);
 
   // Aprire o chiudere un contenitore cambia la sua altezza: quelli agganciati sotto (e ciò che è agganciato a loro) seguono,
   // così non finiscono sopra il contenitore appena aperto e, chiudendolo, non restano lontani.
@@ -403,7 +437,7 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
   }, [check, searchBar]);
 
   return (
-    <div className="canvas" ref={setRefs}>
+    <div className="canvas" ref={setRefs} onPointerDown={(e) => { if (e.target === e.currentTarget) { setSelected((s) => (s.size ? new Set() : s)); setMenu(null); } }}>
       {searchBar && (
         // Mentre si scrive la barra passa davanti ai widget; coperta e inattiva diventa trasparente.
         <div className={`fixed-search-anchor${active ? ' raised' : ''}`}>
@@ -427,7 +461,7 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
         return (
           <section
             key={w.id}
-            className={`widget${p.child ? ' in-container' : ''}${shut ? ' collapsed' : ''}${pin ? ' pinned' : ''}`}
+            className={`widget${p.child ? ' in-container' : ''}${shut ? ' collapsed' : ''}${pin ? ' pinned' : ''}${selected.has(w.id) ? ' selected' : ''}${flashId === w.id ? ' found' : ''}`}
             data-id={w.id}
             data-container={def.container ? '' : undefined}
             data-empty={def.container && !shut && !inside ? '' : undefined}
@@ -438,7 +472,15 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
             }}
             onPointerDown={() => dispatch({ type: 'bringToFront', id: w.id })}
           >
-            <header className="widget-bar" onPointerDown={(e) => startGesture(e, w, dispatch, 'move', ctx)}>
+            <header
+              className="widget-bar"
+              data-tint={w.tint}
+              onPointerDown={(e) => {
+                // Ctrl/Cmd+clic sulla barra sceglie il widget per allinearlo (senza trascinarlo).
+                if (e.ctrlKey || e.metaKey) { e.preventDefault(); toggleSelect(w.id); return; }
+                startGesture(e, w, dispatch, 'move', ctx);
+              }}
+            >
               {renaming === w.id ? (
                 <input
                   className="title-input"
@@ -478,6 +520,15 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
                 >{shut ? '▸' : '▾'}</button>
               )}
               <button
+                className="icon-btn widget-menu-btn"
+                aria-label={t('Widget options')}
+                aria-haspopup="menu"
+                aria-expanded={menu?.id === w.id}
+                title={t('Widget options')}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => setMenu(menu?.id === w.id ? null : { id: w.id, rect: e.currentTarget.getBoundingClientRect() })}
+              >⋯</button>
+              <button
                 className={`icon-btn pin-btn${pin ? ' on' : ''}`}
                 aria-label={pin ? t('Unpin widget') : t('Pin widget')}
                 aria-pressed={pin}
@@ -490,10 +541,10 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
                 className="icon-btn"
                 aria-label={t('Remove widget')}
                 onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => {
+                onClick={async () => {
                   // Un widget fissato, o che tiene traccia dell'utente (diario, abitudini…) con dati dentro, chiede conferma.
-                  if (pin && !confirm(t('This widget is pinned. Remove it anyway?'))) return;
-                  if (def.hasData?.(w.state) && !confirm(t('This widget holds your entries. Remove it anyway?'))) return;
+                  if (pin && !(await ask(t('This widget is pinned. Remove it anyway?'), { confirm: t('Remove'), danger: true }))) return;
+                  if (def.hasData?.(w.state) && !(await ask(t('This widget holds your entries. Remove it anyway?'), { confirm: t('Remove'), danger: true }))) return;
                   dispatch({ type: 'removeWidget', id: w.id });
                 }}
               >×</button>
@@ -509,6 +560,10 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
                 <def.Component
                   state={w.state}
                   onChange={(state) => dispatch({ type: 'updateWidget', id: w.id, patch: { state } })}
+                  linkTask={w.type === 'todo' && !workspace.locked ? (item, text) => {
+                    const prog = getWidget('progress');
+                    if (prog) dispatch({ type: 'addLinkedProgress', todo: w.id, item, widget: progressBeside(w, prog, crypto.randomUUID(), text, randomTilt()), link: !w.parent });
+                  } : undefined}
                 />
               </ErrorBoundary>
             </div>
@@ -536,6 +591,22 @@ export const Canvas = forwardRef<HTMLDivElement, Props>(function Canvas({ worksp
           </section>
         );
       })}
+      {chosen.length > 0 && <SelectionBar count={chosen.length} onClear={() => setSelected(new Set())} />}
+      {menu && (() => {
+        const target = workspace.widgets.find((x) => x.id === menu.id);
+        return target && (
+          <WidgetMenu
+            widget={target}
+            anchor={menu.rect}
+            spaces={spaces}
+            locked={workspace.locked === true}
+            selected={selected.has(target.id)}
+            dispatch={dispatch}
+            onSelect={() => toggleSelect(target.id)}
+            onClose={() => setMenu(null)}
+          />
+        );
+      })()}
       {links.map(([a, b]) => {
         const pa = layout.get(a), pb = layout.get(b);
         const at = pa && pb && contact(pa, pb);

@@ -3,6 +3,17 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export const widgets = (page: Page) => page.locator('.canvas .widget');
 
+/** La finestra di conferma dell'app (non quella del browser). */
+export const confirmBox = (page: Page) => page.getByRole('alertdialog');
+
+/** Risponde alla finestra di conferma: `true` conferma, `false` annulla (gli avvisi hanno solo «OK»). */
+export async function answer(page: Page, ok: boolean) {
+  const box = confirmBox(page);
+  await expect(box).toBeVisible();
+  await box.locator(ok ? '.confirm-yes' : '.confirm-no').click();
+  await expect(box).toHaveCount(0);
+}
+
 /** Apre le impostazioni (una finestra sopra la pagina), sulla categoria indicata. */
 export async function openSettings(page: Page, category?: string) {
   await page.getByRole('button', { name: 'Settings', exact: true }).click();

@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { addWidget, appData, openApp, seed } from './helpers';
+import { addWidget, appData, openApp, seed, answer } from './helpers';
 
 const reload = async (page: Page) => {
   await page.waitForTimeout(600); // autosave con debounce
@@ -117,6 +117,61 @@ test.describe('widget', () => {
     await expect(link).toHaveAttribute('href', 'https://example.com/');
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', /noopener/);
+  });
+
+  test('link rapidi: si riordinano trascinando la maniglia o con le frecce', async ({ page }) => {
+    const w = await addWidget(page, 'Quick links');
+    for (const n of ['uno', 'due', 'tre']) {
+      await w.getByPlaceholder('Name (optional)').fill(n);
+      await w.getByPlaceholder('example.com').fill(`${n}.com`);
+      await w.getByRole('button', { name: 'Add' }).click();
+    }
+    await expect(w.locator('.links li')).toHaveCount(3);
+
+    // Da tastiera: "uno" scende di una posizione.
+    await w.getByRole('button', { name: 'Reorder uno' }).focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(w.locator('.links li a')).toContainText(['due', 'uno', 'tre']);
+
+    // Trascinando: "tre" va in cima.
+    const grip = (await w.getByRole('button', { name: 'Reorder tre' }).boundingBox())!;
+    const first = (await w.locator('.links li').first().boundingBox())!;
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(grip.x + 5, first.y + 2, { steps: 6 });
+    await expect(w.locator('.links li.drop-before')).toHaveCount(1);
+    await page.mouse.up();
+    await expect(w.locator('.links li a')).toContainText(['tre', 'due', 'uno']);
+  });
+
+  test('da fare: un task si collega a un widget progresso che lo spunta al 100% e, chiuso, lo libera', async ({ page }) => {
+    const todo = await addWidget(page, 'To do', 120, 200);
+    await todo.getByPlaceholder('Add and press Enter…').fill('scrivere');
+    await todo.getByPlaceholder('Add and press Enter…').press('Enter');
+
+    // Senza conferma non succede nulla.
+    await todo.locator('li').hover();
+    await todo.getByRole('button', { name: 'Track scrivere with a progress widget' }).click();
+    await answer(page, false);
+    await expect(page.locator('.canvas .widget')).toHaveCount(1);
+
+    await todo.locator('li').hover();
+    await todo.getByRole('button', { name: 'Track scrivere with a progress widget' }).click();
+    await answer(page, true);
+    const progress = page.locator('.canvas .widget', { has: page.locator('.prog') });
+    await expect(progress).toHaveCount(1);
+    await expect(progress.getByLabel('Title')).toHaveValue('scrivere');
+    await expect(todo.getByRole('img', { name: 'Linked to a progress widget' })).toBeVisible();
+    await expect(todo.locator('li input[type=checkbox]')).toBeDisabled();
+
+    await progress.getByLabel('set').fill('100');
+    await expect(todo.locator('li input[type=checkbox]')).toBeChecked();
+    await progress.getByLabel('set').fill('40');
+    await expect(todo.locator('li input[type=checkbox]')).not.toBeChecked();
+
+    await progress.getByLabel('Remove widget').click();
+    await expect(todo.locator('li input[type=checkbox]')).toBeEnabled();
+    await expect(todo.getByRole('img', { name: 'Linked to a progress widget' })).toHaveCount(0);
   });
 
   test('taccuino: le caselle spuntate in lettura aggiornano il testo', async ({ page }) => {

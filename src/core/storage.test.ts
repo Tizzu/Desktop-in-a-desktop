@@ -28,9 +28,30 @@ describe('storage', () => {
       workspaces: [{ id: 'a', name: 'x', order: 0, widgets: [{ id: 'w', type: 'postit', x: 1, y: 2, w: 3, h: 4, z: 1, state: {} }] }],
     };
     const m = migrate(v1);
-    expect(m.version).toBe(3);
-    expect(m.settings).toEqual({ language: 'en', tilt: 1, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, timerSound: true, seenVersion: '', privacyKey: 'Ctrl+Shift+h', privacyNotice: 'center', privacyOnLeave: false, privacyIdle: 0, activeCategory: 'all' });
+    expect(m.version).toBe(4);
+    expect(m.settings).toEqual({ language: 'en', tilt: 1, physics: true, drawerStyle: 'tucked', categories: true, searchBar: false, searchKey: '\\', theme: 'warm', tourDone: true, timerSound: true, seenVersion: '', paletteKey: 'Ctrl+Shift+k', privacyKey: 'Ctrl+Shift+h', privacyNotice: 'center', privacyOnLeave: false, privacyIdle: 0, activeCategory: 'all' });
     expect(m.workspaces[0]!.widgets[0]!.rot).toBe(0);
+  });
+
+  it('migra v3 -> v4: cestino vuoto, tinta valida o niente, scorciatoia della palette che non ne urta altre', () => {
+    const w = (id: string, tint?: unknown) => ({ id, type: 'postit', x: 1, y: 2, w: 3, h: 4, z: 1, rot: 0, tint, state: {} });
+    const v3: any = { version: 3, activeWorkspaceId: 'a', settings: { searchKey: 'Ctrl+k' }, workspaces: [{ id: 'a', name: 'x', order: 0, widgets: [w('p', 'red'), w('q', 'fucsia'), w('r')] }] };
+    const m = sanitize(v3)!;
+    expect(m.version).toBe(4);
+    expect(m.trash).toEqual([]);
+    expect(m.workspaces[0]!.widgets.map((x) => x.tint)).toEqual(['red', undefined, undefined]);
+    expect(m.settings.searchKey).toBe('Ctrl+k');
+    expect(m.settings.paletteKey).toBe('Ctrl+Shift+k');
+    const clash = migrate({ ...v3, settings: { searchKey: 'Ctrl+Shift+k' } });
+    expect(clash.settings.paletteKey).toBe('Alt+k'); // quella di serie era già della ricerca
+  });
+
+  it('il cestino letto dal disco si ripulisce e non supera il limite', () => {
+    const entry = (id: unknown) => ({ space: 'a', at: 1, widget: { id, type: 'postit', x: 0, y: 0, w: 10, h: 10, z: 1, rot: 0, state: {} } });
+    const d: any = { version: 4, activeWorkspaceId: 'a', trash: [entry('ok'), entry(5), null, { space: 'a' }, ...Array.from({ length: 20 }, (_, i) => entry('t' + i))], workspaces: [{ id: 'a', name: 'x', order: 0, widgets: [] }] };
+    const m = migrate(d);
+    expect(m.trash).toHaveLength(10);
+    expect(m.trash![0]!.widget.id).toBe('ok');
   });
 
   it('migra le coordinate assolute (v2) a coordinate rispetto al centro', () => {

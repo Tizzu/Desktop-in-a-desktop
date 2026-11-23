@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeUrl, resolveQuery } from './links';
+import { normalizeUrl, placeItem, resolveQuery } from './links';
 
 describe('normalizeUrl', () => {
   it('aggiunge https e accetta http/https', () => {
@@ -24,5 +24,20 @@ describe('resolveQuery', () => {
     expect(resolveQuery('ricetta pane')).toEqual({ kind: 'search', text: 'ricetta pane' });
     expect(resolveQuery('javascript:alert(1)')).toEqual({ kind: 'search', text: 'javascript:alert(1)' });
     expect(resolveQuery('  ')).toBeNull();
+  });
+});
+
+describe('placeItem', () => {
+  const l = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  const ids = (x: { id: string }[]) => x.map((i) => i.id).join('');
+  it('sposta in avanti e indietro', () => {
+    expect(ids(placeItem(l, 'a', 2))).toBe('bca');
+    expect(ids(placeItem(l, 'c', 0))).toBe('cab');
+    expect(ids(placeItem(l, 'b', 1))).toBe('abc');
+  });
+  it('fuori misura va agli estremi; id sconosciuto non cambia nulla', () => {
+    expect(ids(placeItem(l, 'a', 99))).toBe('bca');
+    expect(ids(placeItem(l, 'c', -5))).toBe('cab');
+    expect(placeItem(l, 'x', 1)).toBe(l);
   });
 });

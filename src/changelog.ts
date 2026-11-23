@@ -3,6 +3,20 @@ export interface Release { version: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.7.0',
+    items: [
+      'Reorder the links in Quick links: drag the ⋮⋮ grip, or use the arrow keys on it',
+      'Link a to-do task to a Progress widget (the 📈 that appears on hover): it opens beside the list, and the task ticks itself when the progress reaches 100%',
+      'Undo and redo for the desk (Ctrl+Z / Ctrl+Shift+Z): moving, adding, removing, duplicating, sticking… and a "Widget removed · Undo" notice',
+      'Recently removed: the last 10 widgets you removed wait in Settings → Data, with their content, ready to be restored',
+      'A ⋯ menu on every widget: duplicate it, colour its title bar, send it to another space, or select it to move several together',
+      'Select several widgets (Ctrl+click their title bars) and drag one of them: they all move together',
+      'Command palette (Ctrl+Shift+K, configurable): find a widget by its text in any space, add a tool, switch space, undo or redo',
+      'The search bar does more: as you type it also offers the results of the command palette (widgets, spaces, commands, tools to add) under the web search; the arrow keys choose, Enter still searches the web',
+      'Alt+1…9 switches space. Hover the ＋ to create a blank space or one from a template (Study day, Planning, Wellbeing, Deep focus): you can delete templates (the default ones come back from Settings → Data) and save the current space as your own template',
+    ],
+  },
+  {
     version: '0.6.0',
     items: [
       'Focus timer: a Start over button, and the sessions count starts over every day (optional)',

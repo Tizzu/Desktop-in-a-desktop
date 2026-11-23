@@ -1,6 +1,9 @@
 /** Scorciatoia predefinita per portare il focus sulla barra di ricerca fissa. */
 export const DEFAULT_SHORTCUT = '\\';
 
+/** Scorciatoia predefinita della palette dei comandi. */
+export const DEFAULT_PALETTE_KEY = 'Ctrl+Shift+k';
+
 /** Scorciatoia predefinita della modalità privacy: con i modificatori, così scatta anche mentre si scrive. */
 export const DEFAULT_PRIVACY_KEY = 'Ctrl+Shift+h';
 
