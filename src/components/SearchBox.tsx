@@ -113,9 +113,9 @@ export function SearchBox({ hotkey = false, shortcut = DEFAULT_SHORTCUT, covered
         >
           {trimmed && (
             <li role="presentation">
-              <div id="sr-web" role="option" aria-selected={current === 0} className={`palette-item${current === 0 ? ' on' : ''}`} onMouseMove={() => setAt(0)} onClick={() => runSearch(text)}>
+              <div id="sr-web" role="option" aria-selected={current === 0} className={`cmdk-item${current === 0 ? ' on' : ''}`} onMouseMove={() => setAt(0)} onClick={() => runSearch(text)}>
                 <span aria-hidden>🔍</span>
-                <span className="palette-text">{t('Search the web for “{text}”', { text: trimmed })}</span>
+                <span className="cmdk-text">{t('Search the web for “{text}”', { text: trimmed })}</span>
               </div>
             </li>
           )}

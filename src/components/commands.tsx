@@ -83,10 +83,10 @@ export function ItemList({ items, current, idPrefix, onHover }: ListProps) {
     <>
       {items.map((it, i) => (
         <li key={it.key} role="presentation">
-          {(i === 0 || items[i - 1]!.group !== it.group) && <div className="palette-group">{t(it.group)}</div>}
-          <div id={`${idPrefix}${it.key}`} role="option" aria-selected={i === current} className={`palette-item${i === current ? ' on' : ''}`} onMouseMove={() => onHover(i)} onClick={it.run}>
+          {(i === 0 || items[i - 1]!.group !== it.group) && <div className="cmdk-group">{t(it.group)}</div>}
+          <div id={`${idPrefix}${it.key}`} role="option" aria-selected={i === current} className={`cmdk-item${i === current ? ' on' : ''}`} onMouseMove={() => onHover(i)} onClick={it.run}>
             <span aria-hidden>{it.icon}</span>
-            <span className="palette-text">{it.text}</span>
+            <span className="cmdk-text">{it.text}</span>
             {it.hint && <small>{it.hint}</small>}
           </div>
         </li>

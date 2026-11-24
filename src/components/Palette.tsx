@@ -17,9 +17,9 @@ export function Palette({ onClose }: { onClose: () => void }) {
   useEffect(() => { list.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' }); }, [current, items]);
 
   return (
-    <div className="palette" role="dialog" aria-modal="true" aria-label={t('Command palette')}>
+    <div className="cmdk" role="dialog" aria-modal="true" aria-label={t('Command palette')}>
       <div className="tour-shade dim" onClick={onClose} />
-      <div className="palette-card">
+      <div className="cmdk-card">
         <input
           ref={input}
           value={query}
@@ -38,7 +38,7 @@ export function Palette({ onClose }: { onClose: () => void }) {
           }}
         />
         <ul id="palette-list" role="listbox" ref={list}>
-          {items.length === 0 && <li className="palette-empty" role="presentation">{t('Nothing found')}</li>}
+          {items.length === 0 && <li className="cmdk-empty" role="presentation">{t('Nothing found')}</li>}
           <ItemList items={items} current={current} idPrefix="pal-" onHover={setAt} />
         </ul>
       </div>

@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { addWidget, appData, openApp, seed, answer } from './helpers';
+import { addWidget, answer, appData, dragToolTo, openApp, seed, widgets } from './helpers';
 
 const reload = async (page: Page) => {
   await page.waitForTimeout(600); // autosave con debounce
@@ -172,6 +172,37 @@ test.describe('widget', () => {
     await progress.getByLabel('Remove widget').click();
     await expect(todo.locator('li input[type=checkbox]')).toBeEnabled();
     await expect(todo.getByRole('img', { name: 'Linked to a progress widget' })).toHaveCount(0);
+  });
+
+  test('tavolozza: sta dentro il suo widget (le classi della palette dei comandi non la toccano) e si rimuove', async ({ page }) => {
+    const w = await addWidget(page, 'Palette');
+    const body = (await w.locator('.widget-body').boundingBox())!;
+    const pal = (await w.locator('.palette').boundingBox())!;
+    expect(pal.x).toBeGreaterThanOrEqual(body.x - 1);
+    expect(pal.y).toBeGreaterThanOrEqual(body.y - 1);
+    expect(pal.x + pal.width).toBeLessThanOrEqual(body.x + body.width + 1);
+    expect(pal.height).toBeLessThanOrEqual(body.height + 1);
+    await expect(w.locator('.swatch').first()).toBeVisible();
+    await w.getByRole('button', { name: 'New palette' }).click();
+    await w.getByLabel('Remove widget').click();
+    await expect(widgets(page)).toHaveCount(0);
+  });
+
+  test('nessun widget disegna elementi a posizione fissa dentro il proprio corpo (una regola CSS non deve coprire la pagina)', async ({ page }) => {
+    test.setTimeout(120_000);
+    await openApp(page);
+    await seed(page, appData([], { tilt: false }));
+    const labels = await page.locator('.drawer-item').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') ?? ''));
+    expect(labels.length).toBeGreaterThan(40);
+    for (const [i, label] of labels.entries()) await dragToolTo(page, label, 300 + (i % 7) * 60, 220 + (i % 5) * 40);
+    await expect(widgets(page)).toHaveCount(labels.length);
+    const offenders = await page.evaluate(() =>
+      [...document.querySelectorAll('.canvas .widget')].flatMap((w) =>
+        [...w.querySelectorAll('.widget-body *')].filter((el) => getComputedStyle(el).position === 'fixed').map((el) => `${w.getAttribute('data-id')}: ${el.className}`)));
+    expect(offenders).toEqual([]);
+    // E ogni widget ha un corpo visibile, grande quanto il suo riquadro (non coperto né ridotto a niente).
+    const boxes = await widgets(page).evaluateAll((els) => els.map((e) => { const b = e.querySelector('.widget-body')!.getBoundingClientRect(); return b.width * b.height; }));
+    expect(boxes.every((a) => a > 1000)).toBe(true);
   });
 
   test('taccuino: le caselle spuntate in lettura aggiornano il testo', async ({ page }) => {

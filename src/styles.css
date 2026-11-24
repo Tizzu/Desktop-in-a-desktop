@@ -755,16 +755,16 @@ section.drop-col { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 
 .toast { position: fixed; left: 50%; bottom: 70px; z-index: 350000; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 16px; background: var(--text); color: var(--bg); border-radius: 999px; box-shadow: 0 8px 28px rgb(var(--shadow) / .4); font-size: 13px; }
 .toast button { padding: 3px 12px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: inherit; font-weight: 600; }
 
-.palette { position: fixed; inset: 0; z-index: 400000; display: grid; place-items: start center; padding-top: 14vh; }
-.palette-card { position: relative; width: min(560px, calc(100vw - 32px)); max-height: 60vh; display: flex; flex-direction: column; background: var(--surface); color: var(--text); border-radius: 16px; box-shadow: 0 16px 48px rgb(var(--shadow) / .45); overflow: hidden; }
-.palette-card input { padding: 14px 18px; font: inherit; font-size: 16px; color: inherit; background: transparent; border: 0; border-bottom: 1px solid var(--bar); outline: none; }
-.palette-card ul { margin: 0; padding: 6px; list-style: none; overflow: auto; }
-.palette-group { padding: 8px 10px 2px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
-.palette-item { display: flex; align-items: baseline; gap: 10px; padding: 7px 10px; border-radius: 10px; cursor: pointer; }
-.palette-item.on { background: var(--bar); }
-.palette-text { flex: none; }
-.palette-item small { min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.palette-empty { padding: 14px; color: var(--muted); text-align: center; }
+.cmdk { position: fixed; inset: 0; z-index: 400000; display: grid; place-items: start center; padding-top: 14vh; }
+.cmdk-card { position: relative; width: min(560px, calc(100vw - 32px)); max-height: 60vh; display: flex; flex-direction: column; background: var(--surface); color: var(--text); border-radius: 16px; box-shadow: 0 16px 48px rgb(var(--shadow) / .45); overflow: hidden; }
+.cmdk-card input { padding: 14px 18px; font: inherit; font-size: 16px; color: inherit; background: transparent; border: 0; border-bottom: 1px solid var(--bar); outline: none; }
+.cmdk-card ul { margin: 0; padding: 6px; list-style: none; overflow: auto; }
+.cmdk-group { padding: 8px 10px 2px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.cmdk-item { display: flex; align-items: baseline; gap: 10px; padding: 7px 10px; border-radius: 10px; cursor: pointer; }
+.cmdk-item.on { background: var(--bar); }
+.cmdk-text { flex: none; }
+.cmdk-item small { min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmdk-empty { padding: 14px; color: var(--muted); text-align: center; }
 
 .trash h4 { margin: 8px 0 4px; font-size: 13px; }
 .trash ul { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 4px; }

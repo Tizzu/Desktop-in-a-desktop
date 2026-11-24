@@ -3,6 +3,12 @@ export interface Release { version: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.7.1',
+    items: [
+      'Fixed the Palette widget, which showed up broken and could not be removed',
+    ],
+  },
+  {
     version: '0.7.0',
     items: [
       'Reorder the links in Quick links: drag the ⋮⋮ grip, or use the arrow keys on it',
